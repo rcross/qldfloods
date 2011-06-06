@@ -1,0 +1,8 @@
+core = "7.x"
+description = "Feature module to manage open bed configuration"
+name = "Open Bed Controller"
+package = "Features"
+project = "open_bed_controller"
+version = "7.x-1.0"
+dependencies[] = "open_bed"
+dependencies[] = "open_bed_admin"

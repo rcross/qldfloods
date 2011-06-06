@@ -1,0 +1,2 @@
+[12-Jan-2011 19:06:18] PHP Notice:  Undefined index:  REMOTE_ADDR in /home/d7jethr/public_html/includes/bootstrap.inc on line 2597
+[12-Jan-2011 19:06:18] PHP Notice:  Trying to get property of non-object in /home/d7jethr/public_html/modules/dblog/dblog.module on line 144

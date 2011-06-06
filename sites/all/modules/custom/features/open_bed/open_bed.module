@@ -1,0 +1,3 @@
+<?php
+
+include_once('open_bed.features.inc');

@@ -1,0 +1,14 @@
+; $Id$
+name = jQuery Update
+description = Updates jQuery to jQuery 1.4.4 and jQuery UI 1.8.7.
+package = User interface
+core = 7.x
+files[] = jquery_update.module
+files[] = jquery_update.install
+
+; Information added by drupal.org packaging script on 2010-09-10
+version = "7.x-2.x-dev"
+core = "7.x"
+project = "jquery_update"
+datestamp = "1284077555"
+

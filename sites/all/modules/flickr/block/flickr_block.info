@@ -1,0 +1,14 @@
+; $Id: flickr_block.info,v 1.5.4.1 2010/09/26 07:26:10 paulbooker Exp $
+name = Flickr Block
+description = Adds capability to display Flickr photos and sets into blocks.
+dependencies[] = flickr
+package = Flickr
+core = 7.x
+
+files[] = flickr_block.module
+; Information added by drupal.org packaging script on 2010-09-30
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "flickr"
+datestamp = "1285805343"
+

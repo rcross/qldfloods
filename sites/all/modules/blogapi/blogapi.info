@@ -1,0 +1,16 @@
+; $Id: blogapi.info,v 1.2 2010/01/15 21:49:18 cweagans Exp $
+
+name = Blog API
+description = Allows users to post content using applications that support XML-RPC blog APIs.
+package = Services
+core = 7.x
+files[] = blogapi.module
+files[] = blogapi.install
+files[] = blogapi.test
+
+; Information added by drupal.org packaging script on 2010-07-11
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "blogapi"
+datestamp = "1278833556"
+

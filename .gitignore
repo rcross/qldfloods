@@ -1,0 +1,8 @@
+.DS_Store
+._*
+*~
+*.kpf
+*.swp
+*.swo
+sites/default/files
+sites/default/settings.php

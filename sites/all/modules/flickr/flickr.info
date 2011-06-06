@@ -1,0 +1,13 @@
+; $Id: flickr.info,v 1.8.2.1 2010/09/26 07:26:10 paulbooker Exp $
+name = Flickr
+description = Flickr and Drupal integration.
+package = Flickr
+core = 7.x
+
+files[] = flickr.module
+; Information added by drupal.org packaging script on 2010-09-30
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "flickr"
+datestamp = "1285805343"
+

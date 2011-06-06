@@ -1,0 +1,32 @@
+<?php
+
+function qldfloods_form_alter(&$form, &$form_state, $form_id) {
+  // kpr($form_id);
+  if ($form_id == 'user_profile_form') {
+    unset($form['flickr']);
+  }
+}
+
+/**
+ * Implementation of hook_node_access
+ */
+function qldfloods_node_access($node, $op, $account) {
+  //Get current user object.
+  global $user;
+  if(is_object($node)){
+      if ($node->type == 'open_bed') {
+        //Can't use the $account passed in via hook_node_access because it thinks we are an
+        //anonymous user even though your logged in. Possible drupal bug or another module is overriding $account variable?
+        $account = $user;
+        if ($account->roles[1]) {
+          drupal_set_message(
+            t('You must log in to view bed details.'), 'error', FALSE);
+          drupal_goto($path = 'user');
+        }
+      }
+  }else{
+      //$node is not an object - error? 
+      // drupal_set_message(
+      //   t('node is not an object -').gettype($node), 'error', FALSE);
+  }
+}

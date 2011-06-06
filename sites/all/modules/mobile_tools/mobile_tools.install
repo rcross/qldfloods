@@ -1,0 +1,60 @@
+<?php
+// $Id: mobile_tools.install,v 1.3 2010/12/22 03:20:45 tdrycker Exp $
+/**
+ * @file
+ * Instalation of the mobile_tools module
+ *
+ */
+
+/**
+ * Removing the mobile user roles from the role table
+ * Cleanup of the variables
+ */
+function mobile_tools_uninstall() {
+  $query = "SELECT * FROM {mobile_tools_roles_relations}";
+  $result = db_query($query);
+  foreach($result as $item) {
+    db_delete('role')
+    ->condition('rid', $item->mrid)
+    ->execute();
+  }
+  variable_del('default_main_nodes_mobile');
+  variable_del('default_main_nodes_original');
+  variable_del('site_frontpage_mobile');
+  variable_del('mobile_tools_enable_build_mode');
+  variable_del('desktop_notification');
+  variable_del('mobile_notification');
+  variable_del('mobile_tools_redirect_exceptions');
+  variable_del('mobile_tools_redirect_exceptions_type');
+  variable_del('mobile_tools_cookie_session');
+  variable_del('mobile_tools_redirect');
+  variable_del('mobile_tools_desktop_url');
+  variable_del('mobile_tools_mobile_url');
+  variable_del('mobile-tools-theme-switch');
+  variable_del('mobile_tools_theme_name');
+  variable_del('mobile-tools-device-detection');
+  variable_del('mobile-tools-device-capabilities');
+}
+
+
+/**
+ * Schema for the roles relations table, to keep track of user roles and their mobile
+ * counterpart.
+ */
+function mobile_tools_schema() {
+  $schema['mobile_tools_roles_relations'] = array(
+    'fields' => array(
+      'rid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'mrid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+    ),
+  );
+  return $schema;
+}

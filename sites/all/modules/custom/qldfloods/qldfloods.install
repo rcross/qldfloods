@@ -1,0 +1,12 @@
+<?php
+
+function qldfloods_install() {
+  module_enable(array('open_bed_controller'));
+}
+
+/**
+ * Enable open bed feature controller
+ */
+function qldfloods_update_7101() {
+  module_enable(array('open_bed_controller'));
+}

@@ -1,0 +1,6 @@
+name = QLD Floods
+description = Site module for form customisations etc.
+package = QLD Floods
+core = 7.x
+
+files[] = qldfloods.module

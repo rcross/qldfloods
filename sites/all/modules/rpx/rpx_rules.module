@@ -1,0 +1,32 @@
+<?php
+// $Id: rpx_rules.module,v 1.1 2011/01/16 21:40:02 geokat Exp $
+
+/**
+ * @file
+ * Hooks and callback functions for rules.module integration.
+ */
+
+/**
+ * Implements hook_rules_rpx_account().
+ */
+function rpx_rules_rpx_linked_account($op, $account) {
+  switch ($op) {
+    case 'added':
+      $event = 'rpx_account_add';
+      break;
+    case 'deleted':
+      $event = 'rpx_account_delete';
+      break;
+  }
+
+  $provider = _rpx_get_identity_provider($account['id']);
+  $account += array (
+    'provider' => $provider['title'],
+  );
+
+  // Convert to an object.
+  $account = (object) $account;
+
+  // Invoke rules event.
+  rules_invoke_event($event, $account);
+}

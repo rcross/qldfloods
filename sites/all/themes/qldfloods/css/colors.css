@@ -1,0 +1,79 @@
+/* $Id: colors.css,v 1.10 2011/01/04 05:24:13 webchick Exp $ */
+
+/* ---------- Color Module Styles ----------- */
+
+body,
+body.overlay {
+  color: #3b3b3b;
+}
+.comment .comment-arrow {
+  border-color: #ffffff;
+}
+#page,
+#main-wrapper,
+#main-menu-links li a.active,
+#main-menu-links li.active-trail a {
+  background: #ffffff;
+}
+.tabs ul.primary li a.active {
+  background-color: #ffffff;
+}
+.tabs ul.primary li.active a {
+  background-color: #ffffff;
+  border-bottom: 1px solid #ffffff;
+}
+#header {
+  background-color: #48a9e4;
+  background-image: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#0779bf), to(#48a9e4));
+  background-image: -moz-linear-gradient(-90deg, #0779bf, #48a9e4);
+}
+a {
+  color: #127795;
+}
+a:hover,
+a:focus {
+  color: #00485c;
+}
+a:active {
+  color: #222;
+}
+.sidebar .block {
+  background-color: #f6f6f2;
+  border-color: #f9f9f9;
+}
+#page-wrapper,
+#footer-wrapper {
+  background: #292929;
+}
+.region-header,
+.region-header a,
+.region-header li a.active,
+#name-and-slogan,
+#name-and-slogan a,
+#secondary-menu-links li a {
+  color: #fffeff;
+}
+
+
+
+#content h2 {font-weight:bold;font-size:1.8em;line-height: normal}
+#content h3 {font-weight:bold;font-size:1.4em;line-height: normal}
+#page-wrapper {font-family:Arial;background: #d9d9d9 !important}
+#header {background:transparent url(header.gif) repeat-x 0 0;height:120px}
+#header div.section {background:transparent url(header.jpg) no-repeat 0 0}
+#name-and-slogan {text-indent:-9000px;overflow:hidden}
+#main {margin:0 auto;background:#fff}
+#main-wrapper {background:transparent url(main-wrapper.gif) repeat-x 0 0}
+#content .content {overflow:hidden}
+#page, #main-wrapper {background:transparent}
+#main-menu-links li a {background:transparent;color:#fff;text-shadow:#000 0 1px 0}
+#main-menu-links li a.active,#main-menu-links li a:hover {background:#fff;color:#127795;text-decoration:none !important;text-shadow:none}
+.node-sticky {background:#fff;border:0}
+.node-article .meta {margin:0 0 15px 0;border-bottom:1px solid #eee;padding:0 0 15px 0}
+.field-name-body p {line-height:1.4em}
+.node-teaser {border-bottom: 3px solid #ddd}
+.sidebar .block {background:transparent;border:0}
+.sidebar .block .item-list ul li {font-size:0.9em}
+.sidebar h2 {font-weight:bold}
+#footer-wrapper {font-family:Arial;background: #272727 !important}
+#footer-wrapper .block {border:0}

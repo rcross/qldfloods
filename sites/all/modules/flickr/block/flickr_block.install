@@ -1,0 +1,13 @@
+<?php
+// $Id: flickr_block.install,v 1.5.4.1 2010/09/26 07:26:10 paulbooker Exp $
+
+/**
+ * @file
+ * The Flickr uninstall hook
+ */
+
+function flickr_block_uninstall() {
+  foreach (range(0, 6) as $delta) {
+    variable_del("flickr_block_{$delta}");
+  }
+}

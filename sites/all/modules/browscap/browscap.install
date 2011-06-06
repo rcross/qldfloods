@@ -1,0 +1,57 @@
+<?php
+// $Id: browscap.install,v 1.1.2.1.2.2 2009/06/08 11:43:12 robloach Exp $
+
+/**
+ * Implements hook_schema().
+ */
+function browscap_schema() {
+  $schema['browscap'] = array(
+    'fields' => array(
+      'useragent' => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => ''),
+      'data' => array('type' => 'blob', 'size' => 'big'),
+    ),
+    'primary key' => array('useragent'),
+  );
+  $schema['browscap_statistics'] = array(
+    'fields' => array(
+      'parent' => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => ''),
+      'counter' => array('type' => 'int', 'not null' => TRUE, 'default' => 0),
+      'is_crawler' => array('type' => 'int', 'size' => 'tiny', 'not null' => TRUE),
+    ),
+    'primary key' => array('parent'),
+  );
+  $schema['cache_browscap'] = array(
+    'fields' => array(
+      'cid' => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => ''),
+      'data' => array('type' => 'blob', 'size' => 'big'),
+      'expire' => array('type' => 'int', 'not null' => TRUE, 'default' => 0),
+      'created' => array('type' => 'int', 'not null' => TRUE, 'default' => 0),
+      'headers' => array('type' => 'text'),
+      'serialized' => array('type' => 'int', 'size' => 'small', 'not null' => TRUE, 'default' => 0),
+    ),
+    'primary key' => array('cid'),
+    'indexes' => array(
+      'expire' => array('expire'),
+    ),
+  );
+  return $schema;
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function browscap_uninstall() {
+  variable_del('browscap_monitor');
+  variable_del('browscap_imported');
+  variable_del('browscap_version');
+}
+
+/**
+ * Update to Drupal 7.
+ * Will be solved later. Set the version number for new installs for now.
+ */
+function browscap_update_7000() {
+  $ret = array();
+
+  return $ret;
+}

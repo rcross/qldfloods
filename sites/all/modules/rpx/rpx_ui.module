@@ -1,5 +1,4 @@
 <?php
-// $Id: rpx_ui.module,v 1.14 2011/01/07 09:45:43 geokat Exp $
 
 /**
  * @file
@@ -34,32 +33,70 @@ function rpx_ui_menu() {
     'weight' => -10,
     'file' => 'rpx_ui.admin.inc',
   );
-  $items['admin/config/people/rpx/profile'] = array(
+  $items['admin/config/people/rpx/settings/reset'] = array(
+    'title' => 'Reset to defaults',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('rpx_admin_reset_confirm'),
+    'access arguments' => array('administer janrain engage'),
+    'file' => 'rpx_ui.admin.inc',
+  );
+  $items['admin/config/people/rpx/mapping'] = array(
     'title' => 'Field Mapping',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('rpx_profile_settings'),
+    'page arguments' => array('rpx_mapping_settings_form'),
     'access arguments' => array('administer janrain engage'),
     'type' => MENU_LOCAL_TASK,
     'weight' => -8,
     'file' => 'rpx_ui.admin.inc',
   );
-  $items['admin/config/people/rpx/profile/add'] = array(
-    'title' => 'Add field',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('rpx_profile_field_form'),
+  $items['admin/config/people/rpx/mapping/create'] = array(
+    'title' => 'Create new mapping',
+    'page callback' => 'rpx_profile_mapping_create',
     'access arguments' => array('administer janrain engage'),
     'type' => MENU_LOCAL_ACTION,
     'file' => 'rpx_ui.admin.inc',
   );
-  $items['admin/config/people/rpx/profile/edit'] = array(
-    'title' => 'Edit field',
+  $items['admin/config/people/rpx/mapping/edit'] = array(
+    'title' => 'Edit mapping options',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('rpx_profile_field_form'),
+    'page arguments' => array('rpx_profile_mapping_edit_form'),
     'access arguments' => array('administer janrain engage'),
     'type' => MENU_CALLBACK,
     'file' => 'rpx_ui.admin.inc',
   );
-  $items['admin/config/people/rpx/profile/delete'] = array(
+  $items['admin/config/people/rpx/mapping/default'] = array(
+    'title' => 'Edit default mapping options',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('rpx_profile_mapping_default'),
+    'access arguments' => array('administer janrain engage'),
+    'type' => MENU_LOCAL_ACTION,
+    'file' => 'rpx_ui.admin.inc',
+  );
+  $items["admin/config/people/rpx/fields"] = array(
+    'title' => 'Manage fields',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('rpx_profile_field_overview_form'),
+    'access arguments' => array('administer janrain engage'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -7,
+    'file' => 'rpx_ui.admin.inc',
+  );
+  $items['admin/config/people/rpx/fields/reset'] = array(
+    'title' => 'Reset to defaults',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('rpx_profile_field_reset_confirm'),
+    'access arguments' => array('administer janrain engage'),
+    'file' => 'rpx_ui.admin.inc',
+  );
+  $items['admin/config/people/rpx/fields/edit'] = array(
+    'title' => 'Edit field',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('rpx_profile_field_edit_form'),
+    'access arguments' => array('administer janrain engage'),
+    'type' => MENU_CALLBACK,
+    'file' => 'rpx_ui.admin.inc',
+  );
+  $items['admin/config/people/rpx/fields/delete'] = array(
     'title' => 'Delete field',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('rpx_profile_field_delete'),
@@ -78,7 +115,7 @@ function rpx_ui_menu() {
       'file' => 'rpx_ui.pages.inc',
     );
     $items['user/%user/rpx/delete'] = array(
-      'title' => 'Delete Janrain Engage Identifier',
+      'title' => 'Delete Linked Account',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('rpx_user_delete_form', 1),
       'access callback' => '_rpx_own_identities_access',
@@ -115,6 +152,157 @@ function _rpx_own_identities_access($account) {
   return user_access('manage own identities') && user_edit_access($account);
 }
 
+/*
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Adds social sharing settings to the content type edit form.
+ */
+function rpx_ui_form_node_type_form_alter(&$form, &$form_state) {
+  $type = $form['#node_type']->type;
+
+  $form['rpx_ui'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Janrain Engage'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#access' => user_access('administer janrain engage'),
+    '#weight' => 25,
+    '#group' => 'additional_settings',
+  );
+
+  $form['rpx_ui']['content_title'] = array(
+    '#type' => 'markup',
+    '#title' => t('Content title'),
+    '#markup' => t('<strong>CONTENT</strong>'),
+  );
+
+  $form['rpx_ui']['share_button'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Share button settings'),
+    '#description' => t('Display the content "share" button in the following locations for this content type:'),
+  );
+
+  $form['rpx_ui']['share_button']['rpx_attach_share_link_to_teasers'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Teasers'),
+    '#default_value' => variable_get('rpx_attach_share_link_to_teasers_'. $type, 0),
+  );
+  $form['rpx_ui']['share_button']['rpx_attach_share_link_to_nodelink'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Links area'),
+    '#default_value' => variable_get('rpx_attach_share_link_to_nodelink_'. $type, 0),
+  );
+  $form['rpx_ui']['share_button']['rpx_attach_share_link_to_nodecont'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Content region'),
+    '#default_value' => variable_get('rpx_attach_share_link_to_nodecont_'. $type, 0),
+  );
+  $form['rpx_ui']['share_button']['rpx_attach_share_link_to_nodecont_weight'] = array(
+    '#type' => 'weight',
+    '#title' => t('Weight for "share" button'),
+    '#title_display' => 'invisible',
+    '#default_value' => variable_get('rpx_attach_share_link_to_nodecont_weight_'. $type, 40),
+    '#delta' => 50,
+    '#description' => t('Weight value for the "share" button displayed in content region.'),
+  );
+  $form['rpx_ui']['share_button']['rpx_label_nodes'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Label for shared content'),
+    '#default_value' => variable_get('rpx_label_nodes_'. $type, variable_get('rpx_default_label_nodes', RPX_DEFAULT_LABEL_NODES_STRING)),
+    '#description' => t('Specify the short string (including tokens) that will appear at the top of the social sharing widget for this content type.')
+  );
+  $form['rpx_ui']['share_button']['rpx_message_nodes'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Default message for shared content'),
+    '#default_value' => variable_get('rpx_message_nodes_'. $type, variable_get('rpx_default_message_nodes', RPX_DEFAULT_MESSAGE_NODES_STRING)),
+    '#description' => t('Specify the default message text (including tokens) to be used when sharing content of this type.')
+  );
+  $form['rpx_ui']['share_button']['rpx_linktext_nodes'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Link text for shared content'),
+    '#default_value' => variable_get('rpx_linktext_nodes_'. $type, variable_get('rpx_default_linktext_nodes', RPX_DEFAULT_LINKTEXT_NODES_STRING)),
+    '#description' => t('Specify the default action description (including tokens) to be used when sharing content of this type.')
+  );
+  $form['rpx_ui']['share_button']['rpx_title_nodes'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Title for shared content'),
+    '#default_value' => variable_get('rpx_title_nodes_'. $type, variable_get('rpx_default_title_nodes', RPX_DEFAULT_TITLE_NODES_STRING)),
+    '#description' => t('Specify the default title (including tokens) to be used when sharing content of this type.')
+  );
+  $form['rpx_ui']['share_button']['rpx_summary_nodes'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Description for shared content'),
+    '#default_value' => variable_get('rpx_summary_nodes_'. $type, variable_get('rpx_default_summary_nodes', RPX_DEFAULT_SUMMARY_NODES_STRING)),
+    '#description' => t('Specify the description (including tokens) to be used when sharing content of this type.')
+  );
+
+  $form['rpx_ui']['comments_title'] = array(
+    '#type' => 'markup',
+    '#title' => t('Comments title'),
+    '#markup' => t('<strong>COMMENTS</strong>'),
+  );
+
+  $form['rpx_ui']['comments'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Comments settings'),
+  );
+
+  $form['rpx_ui']['comments']['rpx_comment_popup_social_at_once'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Automatically launch social sharing widget after comment submission'),
+    '#default_value' => variable_get('rpx_comment_popup_social_at_once_'. $type, 0),
+  );
+  $form['rpx_ui']['comments']['rpx_attach_share_link_to_comments'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Attach "share" link to comments'),
+    '#default_value' => variable_get('rpx_attach_share_link_to_comments_'. $type, 0),
+  );
+
+  $form['rpx_ui']['comments']['rpx_label_comments'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Label for shared comments'),
+    '#default_value' => variable_get('rpx_label_comments_'. $type, variable_get('rpx_default_label_comments', RPX_DEFAULT_LABEL_COMMENTS_STRING)),
+    '#description' => t('Specify the short string (including tokens) that will appear at the top of the social sharing widget for this content type\'s comments.')
+  );
+  $form['rpx_ui']['comments']['rpx_message_comments'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Default message for shared comments'),
+    '#default_value' => variable_get('rpx_message_comments_'. $type, variable_get('rpx_default_message_comments', RPX_DEFAULT_MESSAGE_COMMENTS_STRING)),
+    '#description' => t('Specify the default message text (including tokens) to be used when sharing comments for this content type.')
+  );
+  $form['rpx_ui']['comments']['rpx_linktext_comments'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Link text for shared comments'),
+    '#default_value' => variable_get('rpx_linktext_comments_'. $type, variable_get('rpx_default_linktext_comments', RPX_DEFAULT_LINKTEXT_COMMENTS_STRING)),
+    '#description' => t('Specify the default action description (including tokens) to be used when sharing comments for this content type.')
+  );
+  $form['rpx_ui']['comments']['rpx_title_comments'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Title for shared comments'),
+    '#default_value' => variable_get('rpx_title_comments_'. $type, variable_get('rpx_default_title_comments', RPX_DEFAULT_TITLE_COMMENTS_STRING)),
+    '#description' => t('Specify the default title (including tokens) to be used when sharing comments for this content type.')
+  );
+  $form['rpx_ui']['comments']['rpx_summary_comments'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Description for shared comments'),
+    '#default_value' => variable_get('rpx_summary_comments_'. $type, variable_get('rpx_default_summary_comments', RPX_DEFAULT_SUMMARY_COMMENTS_STRING)),
+    '#description' => t('Specify the description (including tokens) to be used when sharing comments for this content type.')
+  );
+
+  // Add the token tree UI.
+  if (module_exists('token')) {
+    $form['rpx_ui']['token_help'] = array(
+      '#theme' => 'token_tree',
+      '#token_types' => array('user', 'node', 'comment', 'site'),
+      '#global_types' => FALSE,
+    );
+  }
+  else {
+    $form['rpx_ui']['token_help'] = array(
+      '#markup' => t('<a href="@token_module_link" target="_blank">Token</a> module is not enabled. Enable it if you want to use the token browser here.', array('@token_module_link' => 'http://drupal.org/project/token')),
+    );
+  }
+}
 
 /**
  * Gets a list of enabled provider icons.
@@ -136,8 +324,9 @@ function rpx_get_enabled_provider_array($force_lookup = FALSE) {
   }
   $providers = _rpx_providers();
   $display_list = array();
-  foreach ($providers as $provider) {
-    $display_list[] = theme('rpx_icon', array('provider' => $provider['name'])) . ' ' . $provider['title'];
+  foreach ($providers as $provider_name => $provider_title) {
+    $display_list[] = theme('rpx_icon', array('provider' => $provider_name, 'style' => 'rpx-icon-inline')) . '<span' . drupal_attributes(array('class' => 'rpx-provider-title')) . '>' . $provider_title .  '</span>';
+
   }
   return $display_list;
 }
@@ -205,7 +394,7 @@ function _rpx_drupal_field_catalog() {
 /**
  * Construct an array of options for select inputs.
  *
- * @see rpx_profile_settings()
+ * @see rpx_mapping_settings()
  */
 function _rpx_drupal_field_options($catalog, $type) {
   $options = array('' => '');
@@ -224,22 +413,53 @@ function _rpx_drupal_field_options($catalog, $type) {
 }
 
 /**
+ * Construct an array of options for select inputs.
+ *
+ * @see rpx_mapping_settings()
+ */
+function _rpx_engage_field_options() {
+  $options = array('' => '');
+  $fields = db_query("SELECT fid, title FROM {rpx_profile_field}");
+  while ($field = $fields->fetchObject()) {
+    $options[$field->fid] = $field->title;
+  }
+  return $options;
+}
+
+/**
  * Implementation of hook_theme().
  */
 function rpx_ui_theme() {
-  return array(
-    'rpx_profile_settings' => array(
+  $result = array(
+    'rpx_mapping_settings_form' => array(
       'render element' => 'form',
       'file' => 'rpx_ui.admin.inc',
     ),
-    'rpx_path_tree' => array(
-      'file' => 'rpx_ui.admin.inc',
-    ),
-    'rpx_path_tree_table' => array(
-      'variables' => array('header' => array(), 'rows' => array(), 'attributes' => array(), 'empty' => '', 'caption' => ''),
+  );
+
+  $result += array(
+    'rpx_profile_field_overview_form' => array(
+      'render element' => 'form',
       'file' => 'rpx_ui.admin.inc',
     ),
   );
+
+  $result += array(
+    'rpx_provider_weight_table' => array(
+      'render element' => 'providers',
+      'file' => 'rpx_ui.admin.inc',
+    ),
+  );
+
+  if (module_exists('token')) {
+    $result += array(
+      'rpx_path_tree' => array(
+        'file' => 'rpx_ui.admin.inc',
+      ),
+    );
+  }
+
+  return $result;
 }
 
 /**
@@ -248,7 +468,7 @@ function rpx_ui_theme() {
 function rpx_ui_admin_paths() {
   $paths = array(
     'user/*/rpx' => TRUE,
-    'user/*/rpx/delete' => TRUE,
+    'user/*/rpx/delete/*' => TRUE,
   );
   return $paths;
 }
@@ -292,8 +512,14 @@ function rpx_ui_help($path, $arg) {
       $output .= '<dd>' . t('To share a comment using Janrain Engage, a user must choose the desired social networks from the list presented in the Social Publishing popup, signing into the networks if necessary.') . '</dd>';
       $output .= '</dl>';
       return $output;
-    case 'admin/config/people/rpx/profile':
-      return '<p>' . t("This page displays the mapping of Drupal profile fields (either <em>User</em> fields or those created using the <em>Profile</em> and <em>Profile2</em> modules) to the 3rd party user profile data returned by Engage. This mapping is used to pre-fill configured Drupal profile fields at user signup. You can add a new mapping or edit/delete an existing one.") . '</p><p>'. t("Create an Engage data field to map to, and then select the Drupal profile field that should be mapped to the Engage data. Currently only 3 Drupal <em>Profile</em> field types are supported: single-line text, multi-line text, and URL; <em>Profile2</em> and <em>User</em> fields support is limited to text fields.") . '</p>';
+    case 'admin/config/people/rpx/mapping':
+      return '<p>' . t('This page displays the mapping of Drupal profile fields (either <em>User</em> fields or those created using the <em>Profile</em> and <em>Profile2</em> modules) to the 3rd party user profile data returned by Engage. This mapping is used to pre-fill configured Drupal profile fields at user signup and to import the data when user links a 3rd party account. You can add a new mapping or edit/delete an existing one.') . '</p><p>'. t('Create an Engage data field to map to (on the <em>Manage Fields</em> tab), then select it from the dropdown menu below and select the Drupal profile field that should be mapped to the Engage data. Currently only 3 Drupal <em>Profile</em> field types are supported: single-line text, multi-line text, and URL; <em>Profile2</em> and <em>User</em> fields support is limited to text fields.') . '</p>';
+  case 'admin/config/people/rpx/fields':
+    $help = '<p>' . t('Here you can create new fields that can be used on the <em>Field Mapping</em> tab. You can also edit or delete existing fields.') . '</p>';
+    if (!module_exists('token')) {
+      $help .= '<p>' . t('Please note: the <a href="@token_module_link" target="_blank">Token</a> module is not required for the data mapping to work, but you might want to install and enable it in order to see a list of all available paths here.', array('@token_module_link' => 'http://drupal.org/project/token')) . '</p>';
+    }
+    return $help;
   }
 }
 
@@ -304,4 +530,52 @@ function _rpx_user_help_text() {
     $text .= '<p>' . t('To use Janrain Engage, choose a provider and sign in if prompted. Upon successful signin you will be returned to this site as a registered user. Next time you log in, you will be able to use the same 3rd party account instead of a regular username and password. You can have multiple 3rd party accounts if you like; just keep adding them here.') . '</p>';
   }
   return $text;
+}
+
+/**
+ * Helper function: deletes all data created by this module for a user.
+ *
+ * @param integer $uid
+ *   uid of the user that is being deleted.
+ */
+function _rpx_delete_user_data($uid) {
+  db_delete('rpx_mapping_provider')
+    ->condition('uid', $uid)
+    ->execute();
+
+  $aids = db_select('authmap')
+    ->fields('authmap', array('aid'))
+    ->condition('uid', $uid);
+
+  db_delete('rpx_linked_account')
+    ->condition('aid', $aids, 'IN')
+    ->execute();
+}
+
+/**
+ * Implements hook_user_delete().
+ */
+function rpx_ui_user_delete($account) {
+  _rpx_delete_user_data($account->uid);
+}
+
+/**
+ * Implements hook_user_cancel().
+ */
+function rpx_ui_user_cancel($edit, $account, $method) {
+  switch ($method) {
+    case 'user_cancel_reassign':
+      _rpx_delete_user_data($account->uid);
+      break;
+  }
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function rpx_ui_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'rpx_ui') . '/views',
+   );
 }

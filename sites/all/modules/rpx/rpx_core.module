@@ -1,5 +1,4 @@
 <?php
-// $Id: rpx_core.module,v 1.9 2011/01/07 09:44:41 geokat Exp $
 
 /**
  * @file
@@ -9,6 +8,24 @@
  *
  * @see http://www.janrain.com/products/engage
  */
+
+/*
+ * Engage data update options.
+ *
+ * Then a linked account is added by user using the 3rd party identities tab in
+ * the user profile, provider-sourced user profile data can optionally be
+ * imported into the Drupal fields, using any of the below options.
+ */
+// Do not update the field (default).
+define('RPX_UPDATE_NONE', 0);
+// Only update the field if it is empty.
+define('RPX_UPDATE_EMPTY', 1);
+// Always update (overwriting the existing data).
+define('RPX_UPDATE_ALWAYS', 2);
+// Update (overwriting the existing data), based on a weighted provider table.
+define('RPX_UPDATE_MAYBE', 3);
+// Update the data field as an additional value (for multi-value fields).
+define('RPX_UPDATE_ADD', 4);
 
 // The Engage web API library
 require_once('rpx_core.webapi.inc');
@@ -79,8 +96,9 @@ function rpx_core_form_user_register_form_alter(&$form, &$form_state) {
   );
   $form['id_display'] = array(
     '#type' => 'item',
-    '#title' => t('Your Janrain Engage ID'),
-    '#description' => t('This 3rd party ID will be attached to your account after registration.'),
+    '#weight' => 10,
+    '#title' => t('Your account ID'),
+    '#description' => t('This @provider account will be linked to your site account after registration.', array('@provider' => $_SESSION['rpx_last_provider_info']['title'])),
     '#markup' => check_plain($profile['identifier']),
   );
 
@@ -98,9 +116,14 @@ function rpx_core_form_user_register_form_alter(&$form, &$form_state) {
   if(module_exists('profile')) {
     // Build an array of Engage field ID's keyed by profile field name
     $map = array();
-    foreach ($field_map as $fid => $field_meta) {
-      if($field_meta['set'] == 'profile') {
-        $map[$field_meta['field']] = $fid;
+    foreach ($field_map as $mid => $field_mapping) {
+      // Make sure it's a valid mapping.
+      if (!isset($field_mapping['fid'])) {
+        continue;
+      }
+
+      if($field_mapping['set'] == 'profile') {
+        $map[$field_mapping['field']] = $field_mapping['fid'];
       }
     }
     // Search for profile fields and initialize them with Engage profile data.
@@ -122,16 +145,21 @@ function rpx_core_form_user_register_form_alter(&$form, &$form_state) {
     // Build a map keyed by $bundle.$field (we cannot key by $field, as
     // fields in different bundles can have the same name).
     $map = array();
-    foreach ($field_map as $fid => $field_meta) {
-      if($field_meta['set'] == 'profile2') {
-        $map[$field_meta['bundle'] . $field_meta['field']] = $fid;
+    foreach ($field_map as $mid => $field_mapping) {
+      // Make sure it's a valid mapping.
+      if (!isset($field_mapping['fid'])) {
+        continue;
+      }
+
+      if($field_mapping['set'] == 'profile2') {
+        $map[$field_mapping['bundle'] . $field_mapping['field']] = $field_mapping['fid'];
       }
     }
     if(!empty($map)) {
       foreach (field_info_instances('profile2') as $bundle => $fields) {
         foreach ($fields as $field => $array) {
           if (isset($map[$bundle.$field]) && $mapped_value = _rpx_data_map($_SESSION['rpx'], $map[$bundle.$field])) {
-            $form['profile_' . $bundle][$field]['und'][0]['value']['#default_value'] = $mapped_value;
+            $form['profile_' . $bundle][$field][LANGUAGE_NONE][0]['value']['#default_value'] = $mapped_value;
           }
         }
       }
@@ -140,16 +168,21 @@ function rpx_core_form_user_register_form_alter(&$form, &$form_state) {
 
   // Use Engage data to pre-fill User fields.
   $map = array();
-  foreach ($field_map as $fid => $field_meta) {
-    if($field_meta['set'] == 'user') {
-      $map[$field_meta['field']] = $fid;
+  foreach ($field_map as $mid => $field_mapping) {
+    // Make sure it's a valid mapping.
+    if (!isset($field_mapping['fid'])) {
+      continue;
+    }
+
+    if($field_mapping['set'] == 'user') {
+      $map[$field_mapping['field']] = $field_mapping['fid'];
     }
   }
   if(!empty($map)) {
     foreach (field_info_instances('user') as $bundle => $fields) {
       foreach ($fields as $field => $array) {
         if (isset($map[$field]) && $mapped_value = _rpx_data_map($_SESSION['rpx'], $map[$field])) {
-          $form[$field]['und'][0]['value']['#default_value'] = $mapped_value;
+          $form[$field][LANGUAGE_NONE][0]['value']['#default_value'] = $mapped_value;
         }
       }
     }
@@ -168,7 +201,15 @@ function rpx_user_register_submit($form, &$form_state) {
   $form_state['values']['init'] = $form_state['values']['mail'];
 
   $account = $form['#user'];
-  $account = user_save($account, $form_state['values']);
+  $category = $form['#user_category'];
+
+  $account_unchanged = clone $account;
+
+  entity_form_submit_build_entity('user', $account, $form, $form_state);
+
+  $edit = array_intersect_key((array) $account, $form_state['values']);
+  $account = user_save($account_unchanged, $edit, $category);
+
   // Add the Engage data to the account.
   $account = _rpx_populate_user_record($account, $_SESSION['rpx']);
   // Terminate if an error occurred during user_save().
@@ -280,7 +321,8 @@ function _rpx_save_profile_picture(&$account) {
 /**
  * Given an Engage field ID, return the Engage data it maps to.
  *
- * @see rpx_core_form_user_register_form_alter
+ * @see rpx_core_form_user_register_form_alter()
+ * @see _rpx_import_user_data()
  */
 function _rpx_data_map($data, $fid) {
   $path = db_query('SELECT path FROM {rpx_profile_field} WHERE fid = :fid', array('fid' => $fid))->fetchField();
@@ -351,9 +393,33 @@ After confirming your email address, you will be able to log in to [site:name] u
  * Implements hook_user_insert().
  */
 function rpx_core_user_insert(&$edit, $account, $category) {
-  if (isset($_SESSION['rpx'])) {
-    // The user has registered after trying to log in via Engage.
-    user_set_authmaps($account, array('authname_rpx_core' => $_SESSION['rpx']['profile']['identifier']));
+  // Make sure user has registered via Engage.
+  if (!isset($_SESSION['rpx'])) {
+    return;
+  }
+
+  $profile = $_SESSION['rpx']['profile'];
+
+  // Since we are inserting in two tables (authmap and rpx_linked_account),
+  // use a transaction.
+  $txn = db_transaction();
+  try {
+    user_set_authmaps($account, array('authname_rpx_core' => $profile['identifier']));
+    if (module_exists('rpx_ui')) {
+      // Get the new authmap ID and insert it in the rpx_linked_account table
+      $aid = db_query('SELECT aid FROM {authmap} WHERE authname = :id', array('id' => $profile['identifier']))->fetchField();
+      db_insert('rpx_linked_account')
+        ->fields(array(
+          'aid' => $aid,
+          'provider_name' => $_SESSION['rpx_last_provider_info']['name'],
+          'provider_title' => $_SESSION['rpx_last_provider_info']['title'],
+        ))
+        ->execute();
+    }
+  }
+  catch (Exception $e) {
+    $txn->rollback();
+    watchdog_exception('rpx_core', $e);
   }
 }
 
@@ -371,32 +437,31 @@ function rpx_core_menu_site_status_alter(&$menu_site_status, $path) {
  * Gets a list of Engage providers.
  *
  * @param boolean $entire_list
- *   If set, all available providers will be returned, including
- *   those that are not enabled.
+ *   If set, all available providers will be returned, including those that are
+ *   not enabled.
  *
  * @return
- *   An associative array with provider name as the key and provider info
- *   as value.
+ *   An array of provider titles keyed by provider machine name.
  */
 function _rpx_providers($entire_list = FALSE) {
-  $providers['openid'] = array('name' => 'openid', 'title' => 'OpenID', 'domain' => '');
-  $providers['aol'] = array('name' => 'aol', 'title' => 'AOL/AIM', 'domain' => 'openid.aol.com');
-  $providers['google'] = array('name' => 'google', 'title' => 'Google', 'domain' => 'google.com');
-  $providers['yahoo'] = array('name' => 'yahoo', 'title' => 'Yahoo!', 'domain' => 'yahoo.com');
-  $providers['facebook'] = array('name' => 'facebook', 'title' => 'Facebook', 'domain' => 'facebook.com');
-  $providers['myspace'] = array('name' => 'myspace', 'title' => 'MySpace', 'domain' => 'myspace.com');
-  $providers['live_id'] = array('name' => 'live_id', 'title' => 'Windows Live', 'domain' => 'live.com');
-  $providers['blogger'] = array('name' => 'blogger', 'title' => 'Blogger', 'domain' => 'blogger.com');
-  $providers['flickr'] = array('name' => 'flickr', 'title' => 'Flickr', 'domain' => 'flickr.com');
-  $providers['wordpress'] = array('name' => 'wordpress', 'title' => 'Wordpress', 'domain' => 'wordpress.com');
-  $providers['livejournal'] = array('name' => 'livejournal', 'title' => 'Livejournal', 'domain' => 'livejournal.com');
-  $providers['twitter'] = array('name' => 'twitter', 'title' => 'Twitter', 'domain' => 'twitter.com');
-  $providers['hyves'] = array('name' => 'hyves', 'title' => 'Hyves', 'domain' => 'hyves.nl');
-  $providers['myopenid'] = array('name' => 'myopenid', 'title' => 'myOpenId', 'domain' => 'myopenid.com');
-  $providers['netlog'] = array('name' => 'netlog', 'title' => 'Netlog', 'domain' => 'netlog.com');
-  $providers['verisign'] = array('name' => 'verisign', 'title' => 'Verisign', 'domain' => 'verisign.com');
-  $providers['linkedin'] = array('name' => 'linkedin', 'title' => 'LinkedIn', 'domain' => 'linkedin.com');
-  $providers['paypal'] = array('name' => 'paypal', 'title' => 'PayPal', 'domain' => 'paypal.com');
+  $providers['aol'] = 'AOL';
+  $providers['blogger'] = 'Blogger';
+  $providers['facebook'] = 'Facebook';
+  $providers['flickr'] = 'Flickr';
+  $providers['google'] = 'Google';
+  $providers['hyves'] = 'Hyves';
+  $providers['linkedin'] = 'LinkedIn';
+  $providers['live_id'] = 'Windows Live';
+  $providers['livejournal'] = 'LiveJournal';
+  $providers['myopenid'] = 'MyOpenID';
+  $providers['myspace'] = 'MySpace';
+  $providers['netlog'] = 'Netlog';
+  $providers['openid'] = 'OpenID';
+  $providers['paypal'] = 'PayPal';
+  $providers['twitter'] = 'Twitter';
+  $providers['verisign'] = 'VeriSign PIP';
+  $providers['wordpress'] = 'Wordpress.com';
+  $providers['yahoo'] = 'Yahoo!';
 
   if ($entire_list) {
     return $providers;
@@ -417,7 +482,9 @@ function _rpx_providers($entire_list = FALSE) {
 }
 
 /**
- * Helper function: return sign-in provider info given an Engage ID.
+ * Helper function: return sign-in provider info given an Engage ID. Now that we
+ *   store provider info in its own table (rpx_linked_account), this function is
+ *   only used when upgrading from 7.x-1.0-beta1 installations.
  *
  * @param string $id
  *   An Engage ID.
@@ -445,10 +512,28 @@ function _rpx_get_identity_provider($id) {
     'title' => 'Other',
   );
   if (isset($providers[$provider])) {
-    $result['name'] = $providers[$provider]['name'];
-    $result['title'] = $providers[$provider]['title'];
+    $result['name'] = $provider;
+    $result['title'] = $providers[$provider];
   }
   return $result;
+}
+
+/**
+ * Helper function: return machine name given a provider title returned by
+ * Engage.
+ *
+ * @param string $title
+ *   An Engage provider title.
+ *
+ * @return
+ *   The provider's machine name if it is known; "other" otherwise.
+ */
+function _rpx_get_provider_machine_name($title) {
+  $entire_list = TRUE;
+  $providers = _rpx_providers($entire_list);
+  $providers = array_flip($providers);
+
+  return isset($providers[$title]) ? $providers[$title] : 'other';
 }
 
 /**
@@ -470,4 +555,190 @@ function _rpx_token_url($rpx_params = array()) {
   }
 
   return url('rpx/token_handler', array('query' => $query, 'absolute' => TRUE));
+}
+
+/**
+ * Helper function: log a missing field error.
+ *
+ * @param string $entity_type
+ *   Name of entity the field belongs to (e.g. profile, profile2, user).
+ * @param string $field_name
+ *   Field name (e.g. profile_displayname).
+ * @param string $user_name
+ *   User name.
+ */
+function _rpx_report_missing_field($entity_type, $field_name, $user_name) {
+  watchdog('rpx_core', 'Cannot map Janrain Engage data to the %entity field %field, as it does not seem to exist for user %user. Update your fields and/or the Janrain Engage field map.', array('%entity' => $entity_type, '%field' => $field_name, '%user' => $user_name), WATCHDOG_WARNING, l(t('Field Mapping'), 'admin/config/people/rpx/mapping'));
+}
+
+/**
+ * Imports Engage user profile data into profile, profile2 and user entity
+ * fields, based on the settings for each mapping.
+ */
+function _rpx_import_user_data() {
+  global $user;
+  $map = variable_get('rpx_profile_fields_map', array());
+  $provider = $_SESSION['rpx_last_provider_info']['name'];
+
+  foreach ($map as $mid => $mapping) {
+    // Should we try to update the field at all?
+    if (!isset($mapping['update']) || $mapping['update'] == RPX_UPDATE_NONE) {
+      continue;
+    }
+
+    $new_data = _rpx_data_map($_SESSION['rpx'], $mapping['fid']);
+
+    // Only update if provider returned data for the field.
+    if($new_data === '') {
+      continue;
+    }
+
+    // If data append is requested, make sure it's a multi-value field.
+    if ($mapping['update'] == RPX_UPDATE_ADD) {
+      $field_info = field_info_field($mapping['field']);
+      if (!isset($field_info['cardinality']) || $field_info['cardinality'] == 1) {
+        watchdog('rpx_core', 'Refusing to append new data to a single-value field %field_name.', array('%field_name' => $mapping['field']), WATCHDOG_WARNING);
+        continue;
+      }
+    }
+
+    // Check if whether we overwrite or not depends on the provider
+    if ($mapping['update'] == RPX_UPDATE_MAYBE) {
+      // Make sure this provider is in the mapping's provider list.
+      if(($provider_weight = array_search($provider, $mapping['providers'])) === FALSE) {
+        continue;
+      }
+
+      // Make sure this provider is not lower in the weight table than the
+      // previous one.
+      $prev_provider = db_select('rpx_mapping_provider')
+        ->fields('rpx_mapping_provider', array('name'))
+        ->condition('uid', $user->uid)
+        ->condition('mid', $mid)
+        ->execute()
+        ->fetchAssoc();
+      $prev_provider = $prev_provider ? $prev_provider['name'] : '';
+      $prev_provider_weight = array_search($prev_provider, $mapping['providers']);
+      if ($prev_provider_weight !== FALSE && $provider_weight > $prev_provider_weight) {
+        continue;
+      }
+    }
+
+    // Import into the profile fields.
+    if(module_exists('profile') && $mapping['set'] == 'profile') {
+      $profile = db_select('profile_field')
+        ->fields('profile_field', array('fid'))
+        ->condition('name', $mapping['field'])
+        ->execute()
+        ->fetchAssoc();
+
+      // Check that field still exists.
+      if (!$profile) {
+        _rpx_report_missing_field('profile', $mapping['field'], $user->name);
+        continue;
+      }
+
+      if ($mapping['update'] == RPX_UPDATE_EMPTY) {
+        // Make sure the field is empty.
+        $field = db_select('profile_value')
+          ->fields('profile_value', array('value'))
+          ->condition('fid', $profile['fid'])
+          ->condition('uid', $user->uid)
+          ->execute()
+          ->fetchAssoc();
+        if ($field && $field['value'] !== '') {
+          continue;
+        }
+      }
+      // Import the data.
+      db_merge('profile_value')
+        ->key(array(
+          'fid' => $profile['fid'],
+          'uid' => $user->uid,
+          ))
+        ->fields(array('value' => $new_data))
+        ->execute();
+    }
+    else {
+      // Check if we should import into the remaining (profile2 and user) entity
+      // types.
+      if(module_exists('profile2') && $mapping['set'] == 'profile2') {
+        $entity_type = 'profile2';
+        $entity = profile2_load_by_user($user->uid, $mapping['bundle']);
+      }
+      else if ($mapping['set'] == 'user') {
+        $entity_type = 'user';
+        $account = user_load($user->uid);
+        $entity = new stdClass();
+        $entity->uid = $user->uid;
+        if(isset($account->{$mapping['field']})) {
+          $entity->{$mapping['field']} = $account->{$mapping['field']};
+        }
+      }
+
+      // Check that field still exists.
+      if (!isset($entity->{$mapping['field']})) {
+        _rpx_report_missing_field($entity_type, $mapping['field'], $user->name);
+        continue;
+      }
+
+      $values = &$entity->{$mapping['field']}[LANGUAGE_NONE];
+
+      if ($mapping['update'] == RPX_UPDATE_EMPTY) {
+        // Make sure the field is empty.
+        if(isset($values[0]['value'])) {
+          continue;
+        }
+      }
+
+      //
+      // Import the data (profile2 and user entity types).
+      //
+      if($mapping['update'] == RPX_UPDATE_ADD) {
+        // If we are appending to a multi-value field, make sure it can accept
+        // another value.
+        if ($field_info['cardinality'] != -1 && count($values) >= $field_info['cardinality']) {
+          watchdog('rpx_core', 'Refusing to append new data: multi-value field %field_name can\'t accept another value.', array('%field_name' => $mapping['field']), WATCHDOG_WARNING);
+          continue;
+        }
+        elseif ($values) {
+          // Make sure $new_data value isn't already there.
+          $exists = FALSE;
+          foreach ($values as $value) {
+            if (!strcmp($value['value'], $new_data)) {
+              $exists = TRUE;
+              break;
+            }
+          }
+          if ($exists) {
+            continue;
+          }
+          else {
+            $slot = count($values);
+          }
+        }
+        else {
+          // Field has no values.
+          $slot = 0;
+        }
+      }
+      else {
+        $slot = 0;
+      }
+
+      $values[$slot]['value'] = $new_data;
+      field_attach_update($entity_type, $entity);
+    }
+
+    if($mapping['update'] != RPX_UPDATE_ADD) {
+      // Record the provider's name as the last provider used in the mapping.
+      db_merge('rpx_mapping_provider')
+        ->key(array(
+          'uid' => $user->uid,
+          'mid' => $mid,
+          ))
+        ->fields(array('name' => $provider))
+        ->execute();
+    }
+  }
 }

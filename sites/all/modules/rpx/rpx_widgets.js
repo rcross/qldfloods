@@ -1,26 +1,49 @@
-// $Id: rpx_widgets.js,v 1.6 2011/01/10 16:27:10 geokat Exp $
 (function ($) {
 
 Drupal.behaviors.rpx = {
   attach: function (context, settings) {
-    function popupSocial(post) {
+    function finishCallback(results) {
+      var setting = settings.rpx.clicked_link_settings;
+      if ('cookie' in setting) {
+        $.each(results, function(key, provider) {
+          if (provider.success) {
+            $.cookie('Drupal.visitor.rpx_social_' + setting.cookie.type, setting.cookie.id, {path: '/'});
+            location.replace(Drupal.settings.basePath + '?q=rpx/cookie_handler&destination=' + location.href);
+            return false;
+          }
+        });
+      }
+    }
+    function popupSocial() {
       RPXNOW.loadAndRun(['Social'], function () {
+        var post = settings.rpx.clicked_link_settings.post;
         var activity = new RPXNOW.Social.Activity(
           post.label,
           post.linktext,
           post.link
         );
-        activity.setUserGeneratedContent(post.comment);
-        activity.setDescription(post.summary);
-        RPXNOW.Social.publishActivity(activity);
+        if ('comment' in post) {
+          activity.setUserGeneratedContent(post.comment);
+        }
+        if ('summary' in post) {
+          activity.setDescription(post.summary);
+        }
+        if ('title' in post) {
+          activity.setTitle(post.title);
+        }
+        RPXNOW.Social.publishActivity(activity, {finishCallback: finishCallback});
       });
     };
     if ('rpx' in settings && 'atonce' in settings.rpx) {
-      popupSocial(settings.rpx['atonce']);
+      settings.rpx.clicked_link_settings = settings.rpx.atonce;
+      popupSocial();
     }
     $('.rpx-link-social', context).once('rpx-link-social', function() {
-      var post = settings.rpx[$(this).attr('id')];
-      $(this).bind('click', function(e) {popupSocial(post); return false;});
+      $(this).bind('click', function(e) {
+        settings.rpx.clicked_link_settings = settings.rpx[$(this).attr('id')];
+        popupSocial();
+        return false;
+      });
     });
   }
 };

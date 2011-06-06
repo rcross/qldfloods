@@ -1,5 +1,4 @@
 <?php
-// $Id: rpx_ui.paths.inc,v 1.2 2010/12/29 12:01:26 geokat Exp $
 
 /**
  * @file

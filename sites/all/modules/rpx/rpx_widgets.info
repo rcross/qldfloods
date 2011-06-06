@@ -1,4 +1,3 @@
-; $Id: rpx_widgets.info,v 1.1 2010/11/15 23:46:19 geokat Exp $
 name = Janrain Engage Widgets
 description = Engage sign-in and social widgets integration.
 dependencies[] = rpx_core
@@ -7,9 +6,9 @@ core = 7.x
 files[] = rpx_widgets.module
 stylesheets[all][] = rpx_widgets.css
 
-; Information added by drupal.org packaging script on January 1, 1970 - 00:00
-version = "7.x-1.x-dev"
+; Information added by drupal.org packaging script on 2011-04-14
+version = "7.x-2.0"
 core = "7.x"
 project = "rpx"
-datestamp = "1295224370"
+datestamp = "1302814616"
 

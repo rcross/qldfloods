@@ -1,5 +1,4 @@
 <?php
-// $Id: rpx_core.webapi.inc,v 1.1 2010/12/24 18:41:43 geokat Exp $
 
 /**
  * @file

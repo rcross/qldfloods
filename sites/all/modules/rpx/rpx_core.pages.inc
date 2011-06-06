@@ -1,5 +1,4 @@
 <?php
-// $Id: rpx_core.pages.inc,v 1.4 2011/01/16 22:49:24 geokat Exp $
 
 /**
  * @file
@@ -21,54 +20,105 @@ function rpx_token_handler() {
   $add_to_account = isset($_REQUEST['add_to_account']) ? TRUE : FALSE;
 
   if ($token) {
-    $_SESSION['rpx'] = RPX::auth_info($token, variable_get('rpx_apikey', ''), !$add_to_account && variable_get('rpx_extended_authinfo', FALSE));
+    $_SESSION['rpx'] = RPX::auth_info($token, variable_get('rpx_apikey', ''), variable_get('rpx_extended_authinfo', FALSE));
     if (!$_SESSION['rpx']) {
       drupal_goto();
     }
     // auth_info() stat should be ok
     if ($_SESSION['rpx']['stat'] != 'ok') {
-      drupal_set_message(t('Failed to obtain your 3rd party identifier.'), 'error');
+      drupal_set_message(t('We were unable to complete your request.'), 'error');
       watchdog('rpx_core', 'Failed to obtain a 3rd party identifier for user ID %id: auth_info() returned error: %err', array('%id' => $user->uid, '%err' => $_SESSION['rpx']['err']['msg']), WATCHDOG_ERROR);
       drupal_goto();
     }
 
-    $rpxid = $_SESSION['rpx']['profile']['identifier'];
+    $rpx_id = $_SESSION['rpx']['profile']['identifier'];
+    $provider_title = $_SESSION['rpx']['profile']['providerName'];
+
+    // Save provider info (for token replacement and account linking).
+    $_SESSION['rpx_last_provider_info'] = array(
+      'name' => _rpx_get_provider_machine_name($provider_title),
+      'title' => $provider_title,
+    );
 
     // Are we adding a new identity to an existing account?
     if ($add_to_account) {
       if (user_is_logged_in()) {
         // the identifier returned by auth_info() should not be already
         // mapped to an existing account
-        if (user_get_authmaps($rpxid)) {
-          drupal_set_message(t('That identifier is already mapped to an account.'), 'error');
-          drupal_goto('user/' . $user->uid . '/rpx');
+        if (user_get_authmaps($rpx_id)) {
+          $message = array(
+            'text' => t('We were unable to complete your request.  That account ID is already linked to a user on our site.'),
+            'type' => 'error',
+          );
         }
         else {
-          // Can't use user_set_authmaps() here, since it doesn't support
-          // multiple authnames per user via same module
-          db_insert('authmap')
-            ->fields(array(
-              'uid' => $user->uid,
-              'authname' => $rpxid,
-              'module' => 'rpx_core',
-            ))
+          $txn = db_transaction();
+          try {
+            // Can't use user_set_authmaps() here, since it doesn't support
+            // multiple authnames per user via same module
+            $result1 = $aid = db_insert('authmap')
+              ->fields(array(
+                'uid' => $user->uid,
+                'authname' => $rpx_id,
+                'module' => 'rpx_core',
+              ))
             ->execute();
-          drupal_set_message(t('Successfully added %identity to your account', array('%identity' => $rpxid)));
+            // rpx_linked_account table is created by the rpx_ui module.
+            if (module_exists('rpx_ui')) {
+              $result2 = db_insert('rpx_linked_account')
+                ->fields(array(
+                  'aid' => $aid,
+                  'provider_name' => $_SESSION['rpx_last_provider_info']['name'],
+                  'provider_title' => $_SESSION['rpx_last_provider_info']['title'],
+                ))
+                ->execute();
+            }
+          }
+          catch (Exception $e) {
+            $txn->rollback();
+            watchdog_exception('rpx_core', $e);
+          }
 
-          // Let other modules (e.g. rpx_rules) know that a linked account has been
-          // added.
-          $account = array(
-            'user' => $user,
-            'id' => $rpxid,
+          // Default (error) message.
+          $message = array(
+            'text' => t('We were unable to link your %provider account.', array('%provider' => $provider_title)),
+            'type' => 'error',
           );
-          module_invoke_all('rpx_linked_account', 'added', $account);
-
+          if (isset($result1) && isset($result2)) {
+            $message = array(
+              'text' => t('We have successfully linked your %provider account.', array('%provider' => $provider_title)),
+              'type' => 'status',
+            );
+            // Let other modules (e.g. rpx_rules) know that a linked account has been
+            // added.
+            $account = array(
+              'user' => $user,
+              'id' => $rpx_id,
+              'provider_machinename' => $_SESSION['rpx_last_provider_info']['name'],
+              'provider_title' => $_SESSION['rpx_last_provider_info']['title'],
+            );
+            module_invoke_all('rpx_linked_account', 'added', $account);
+            _rpx_import_user_data();
+          }
+        }
+        // Redirect the user back to original overlay if possible.
+        // @see rpx_user_identities().
+        if (isset($_SESSION['rpx_overlay_uri'])) {
+          $_GET['destination'] = $_SESSION['rpx_overlay_uri'];
+          // Store the message for rpx_user_identities() so that it
+          // can be shown in overlay instead of the parent window.
+          $_SESSION['rpx_overlay_message'] = $message;
+          drupal_goto();
+        }
+        else {
+          unset($_SESSION['rpx_overlay_message']);
+          drupal_set_message($message['text'], $message['type']);
           drupal_goto('user/' . $user->uid . '/rpx');
         }
       }
     }
 
-    $account = user_external_load($rpxid);
+    $account = user_external_load($rpx_id);
 
     // Is this a registered user?
     if (isset($account->uid)) {
@@ -113,7 +163,9 @@ function rpx_token_handler() {
             // added.
             $account = array(
               'user' => $user,
-              'id' => $rpxid,
+              'id' => $rpx_id,
+              'provider_machinename' => $_SESSION['rpx_last_provider_info']['name'],
+              'provider_title' => $_SESSION['rpx_last_provider_info']['title'],
             );
             module_invoke_all('rpx_linked_account', 'added', $account);
             // Nothing more to do.
@@ -127,10 +179,10 @@ function rpx_token_handler() {
             // the user to complete (and submit) the form manually instead of
             // showing the error messages about the missing values generated by
             // FAPI.
-            drupal_set_message(t('Your login provider did not provide an email address. Please enter one below to complete your registration. If you already have an account, you can <a href="@login">log in</a> now and add your 3rd party identity under "My account". ', array('@login' => url('user/login'))), 'warning');
+            drupal_set_message(t('Although we have verified your account, @provider did not provide us with your e-mail address.  Please enter one below to complete your registration.  (If you\'ve previously registered with us, please <a href="@login">log in</a> and add your @provider account under "Linked accounts.")', array('@provider' => $_SESSION['rpx_last_provider_info']['title'], '@login' => url('user/login'))), 'warning');
           }
           else {
-            drupal_set_message(t('Account registration using the information provided by your identity provider failed due to the reasons listed below. Complete the registration by filling out the form below. If you already have an account, you can <a href="@login">log in</a> now and add your 3rd party identity under "My account". ', array('@login' => url('user/login'))), 'warning');
+            drupal_set_message(t('Although we have verified your account, registration using the information provided by @provider failed due to the reasons listed below. Please complete the registration by filling out the form below. (If you\'ve previously registered with us, please <a href="@login">log in</a> and add your @provider account under "Linked accounts.")', array('@provider' => $_SESSION['rpx_last_provider_info']['title'], '@login' => url('user/login'))), 'warning');
             // Append form validation errors below the above warning.
             foreach ($messages['error'] as $message) {
               drupal_set_message($message, 'error');
@@ -138,7 +190,7 @@ function rpx_token_handler() {
           }
         }
         else {
-          drupal_set_message(t('Complete the registration by filling out the form below. If you already have an account, you can <a href="@login">log in</a> now and add your 3rd party identity under "My account". ', array('@login' => url('user/login'))), 'warning');
+          drupal_set_message(t('Please complete the registration by filling out the form below.  (If you\'ve previously registered with us, please <a href="@login">log in</a> and add your @provider account under "Linked accounts.")', array('@provider' => $_SESSION['rpx_last_provider_info']['title'], '@login' => url('user/login'))), 'warning');
         }
 
         // Redirect to the normal registration page and prefill with the values

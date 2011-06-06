@@ -1,8 +1,25 @@
-// $Id: rpx_ui.js,v 1.3 2010/12/20 23:40:27 geokat Exp $
 (function ($) {
 
 Drupal.behaviors.rpxUIProfileFields = {
   attach: function (context, settings) {
+    $('.rpx-field-select', context).once('rpx-field-select', function() {
+      var mid = getMID(this);
+      var map = settings.map;
+      var rpx_fields = settings.rpx_fields;
+
+      this.initialValue = this.options[0].text;
+      $(this).val(map[mid].fid);
+
+      // Display the Engage datafield path in the label below the dropdown.
+      $(this).bind('change keyup', function () {
+        var fid = $(this).val();
+        var path = fid in rpx_fields ? rpx_fields[fid].path : this.initialValue;
+        $(this).siblings('.description').html(path);
+      });
+      // Trigger the above event on initial pageload to update the label.
+      $(this).trigger('change', false);
+    });
+
     $('.field-select', context).once('field-select', function() {
       // Save the call to action option.
       this.initialValue = this.options[0].text;
@@ -31,7 +48,7 @@ Drupal.behaviors.rpxUIProfileFields = {
     });
 
     $('.field-set-select', context).once('field-set-select', function() {
-      var fid = getFID(this);
+      var mid = getMID(this);
       var sets = settings.catalog;
       var map = settings.map;
       var bundleDiv = $('.field-bundle-select', $(this).parents('tr').eq(0)).parents('div').eq(0);
@@ -46,7 +63,7 @@ Drupal.behaviors.rpxUIProfileFields = {
       $.each(sets, function(set) {
         options[set] = sets[set].title;
       });
-      var selected = (fid in map) ? map[fid].set : '';
+      var selected = map[mid].set;
       $(this).rpxUIPopulateOptions(options, selected);
 
       // Disable the bundle and field select inputs. This is done for the sake
@@ -79,7 +96,7 @@ Drupal.behaviors.rpxUIProfileFields = {
           options = $.isEmptyObject(options) ? [] : options;
           // If the (Engage) field is mapped, preselect the (Drupal) field
           // it is mapped to.
-          var selected = (fid in map && map[fid].set == selectedSet) ? map[fid].field : '';
+          var selected = (map[mid].set == selectedSet) ? map[mid].field : '';
           fieldDropdown.rpxUIPopulateOptions(options, selected);
         }
         else {
@@ -94,7 +111,7 @@ Drupal.behaviors.rpxUIProfileFields = {
           options = $.isEmptyObject(options) ? [] : options;
           // If the (Engage) field is mapped, preselect the bundle for the
           // Drupal field it is mapped to.
-          var selected = (fid in map && map[fid].set == selectedSet) ? map[fid].bundle : '';
+          var selected = (map[mid].set == selectedSet) ? map[mid].bundle : '';
           bundleDropdown.rpxUIPopulateOptions(options, selected);
 
           // Populating the bundle select input automatically preselects
@@ -109,7 +126,7 @@ Drupal.behaviors.rpxUIProfileFields = {
           options = $.isEmptyObject(options) ? [] : options;
           // If the (Engage) field is mapped, preselect the (Drupal) field
           // it is mapped to.
-          var selected = (fid in map && map[fid].set == selectedSet && map[fid].bundle == selectedBundle) ? map[fid].field : '';
+          var selected = (map[mid].set == selectedSet && map[mid].bundle == selectedBundle) ? map[mid].field : '';
           fieldDropdown.rpxUIPopulateOptions(options, selected);
         }
       });
@@ -151,21 +168,21 @@ jQuery.fn.rpxUIPopulateOptions = function (options, selected) {
 };
 
 /**
- * Return the Engage field id for the element's row.
+ * Return the mapping ID for the element's row.
  */
-function getFID(element) {
+function getMID(element) {
   var classList = $(element).attr('class').split(/\s+/);
-  var fid = "";
+  var mid = "";
   $.each(classList, function(index, item) {
-    if (item.substr(0,4) == 'fid-') {
-        fid = item.substr(4);
+    if (item.substr(0,4) == 'mid-') {
+        mid = item.substr(4);
         return false;
     }
   });
-  if (fid)
-    return fid;
+  if (mid)
+    return mid;
   else
-    throw 'rpx_ui.js getFID(): element\'s class list does not contain a fid.';
+    throw 'rpx_ui.js getMID(): element\'s class list does not contain a mid.';
 }
 
 Drupal.behaviors.rpxPathTree = {
@@ -183,7 +200,9 @@ Drupal.behaviors.rpxPathInsert = {
     $('.rpx-path-click-insert .rpx-path', context).once('rpx-path-click-insert', function() {
       var newThis = $('<a href="javascript:void(0);" title="' + Drupal.t('Insert this path into your form') + '">' + $(this).html() + '</a>').click(function() {
         Drupal.settings.rpxPathInput.val($(this).text());
-        $('html,body').animate({scrollTop: $('.rpx-field-title-input').offset().top}, 500);
+        // Compensation for the toolbar's height.
+        var scrollCorrection = $('#toolbar') ? $('#toolbar').height() + 120 : 0;
+        $('html,body').animate({scrollTop: $('.rpx-field-title-input').offset().top - scrollCorrection}, 500);
         return false;
       });
       $(this).html(newThis);

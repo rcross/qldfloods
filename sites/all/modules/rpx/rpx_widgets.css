@@ -1,88 +1,193 @@
-/* $Id: rpx_widgets.css,v 1.3 2010/12/30 15:15:01 geokat Exp $ */
-
 .rpx-icon-small {
   display: block;
-  width: 17px;
+  width: 16px;
   height: 16px;
   margin: 1px;
   float: left;
   background-image: url(images/providers_icons16.png);
 }
 
+.rpx-icon-medium {
+  display: block;
+  width: 30px;
+  height: 30px;
+  margin: 1px;
+  float: left;
+  background-image: url(images/providers_icons32.png);
+}
+
+.rpx-icon-inline {
+  vertical-align: middle;
+  margin: 0px;
+  display: inline-block;
+  float: none;
+}
+
+.rpx-provider-title {
+  margin-left: 5px;
+}
+
+/* We don't want bullets in the admin/config/people/rpx provider list */
+.item-list ul li {
+  list-style-type: none !important;
+}
+
 .rpx-facebook-small {
-  background-position: -17px 0px;
-}
-
-.rpx-google-small {
-  background-position: -34px 0px;
-}
-
-.rpx-linkedin-small {
-  background-position: -52px 0px;
-}
-
-.rpx-myspace-small {
-  background-position: -68px 0px;
+  background-position: 0px 0px;
 }
 
 .rpx-twitter-small {
-  background-position: -87px 0px;
+  background-position: 0px -16px;
+}
+
+.rpx-myspace-small {
+  background-position: 0px -32px;
 }
 
 .rpx-live_id-small {
-  background-position: -104px 0px;
+  background-position: 0px -48px;
 }
 
 .rpx-yahoo-small {
-  background-position: -121px 0px;
+  background-position: 0px -64px;
 }
 
-.rpx-aol-small {
-  background-position: -138px 0px;
-}
-
-.rpx-blogger-small {
-  background-position: -155px 0px;
-}
-
-.rpx-flickr-small {
-  background-position: -172px 0px;
-}
-
-.rpx-hyves-small {
-  background-position: -190px 0px;
-}
-
-.rpx-livejournal-small {
-  background-position: -207px 0px;
-}
-
-.rpx-myopenid-small {
-  background-position: -224px 0px;
-}
-
-.rpx-netlog-small {
-  background-position: -242px 0px;
+.rpx-google-small {
+  background-position: 0px -80px;
 }
 
 .rpx-openid-small {
-  background-position: -259px 0px;
+  background-position: 0px -96px;
+}
+
+.rpx-aol-small {
+  background-position: 0px -112px;
+}
+
+.rpx-livejournal-small {
+  background-position: 0px -128px;
+}
+
+.rpx-myopenid-small {
+  background-position: 0px -144px;
+}
+
+.rpx-netlog-small {
+  background-position: 0px -160px;
+}
+
+.rpx-flickr-small {
+  background-position: 0px -176px;
+}
+
+.rpx-blogger-small {
+  background-position: 0px -192px;
 }
 
 .rpx-verisign-small {
-  background-position: -276px 0px;
+  background-position: 0px -208px;
 }
 
 .rpx-wordpress-small {
-  background-position: -294px 0px;
+  background-position: 0px -224px;
+}
+
+.rpx-hyves-small {
+  background-position: 0px -240px;
+}
+
+.rpx-linkedin-small {
+  background-position: 0px -256px;
 }
 
 .rpx-paypal-small {
-  background-position: -312px 0px;
+  background-position:0px -272px;
+}
+
+.rpx-other-small {
+  background-position:0px -288px;
+}
+
+.rpx-facebook-medium {
+  background-position: 0px 0px;
+}
+
+.rpx-google-medium {
+  background-position: 0px -32px;
+}
+
+.rpx-linkedin-medium {
+  background-position: 0px -64px;
+}
+
+.rpx-myspace-medium {
+  background-position: 0px -96px;
+}
+
+.rpx-twitter-medium {
+  background-position: 0px -128px;
+}
+
+.rpx-live_id-medium {
+  background-position: 0px -160px;
+}
+
+.rpx-yahoo-medium {
+  background-position: 0px -192px;
+}
+
+.rpx-aol-medium {
+  background-position: 0px -224px;
+}
+
+.rpx-blogger-medium {
+  background-position: 0px -256px;
+}
+
+.rpx-flickr-medium {
+  background-position: 0px -288px;
+}
+
+.rpx-hyves-medium {
+  background-position: 0px -320px;
+}
+
+.rpx-livejournal-medium {
+  background-position: 0px -352px;
+}
+
+.rpx-myopenid-medium {
+  background-position: 0px -384px;
+}
+
+.rpx-netlog-medium {
+  background-position: 0px -416px;
+}
+
+.rpx-openid-medium {
+  background-position: 0px -448px;
+}
+
+.rpx-verisign-medium {
+  background-position: 0px -480px;
+}
+
+.rpx-wordpress-medium {
+  background-position: 0px -512px;
+}
+
+.rpx-paypal-medium {
+  background-position: 0px -544px;
+}
+
+.rpx-other-medium {
+  background-position: 0px -576px;
 }
 
 #user-login-form .rpx-links,
 #user-login .rpx-links {
+  padding-left: 0;
+  padding-bottom: 15px;
   overflow: auto;
   width: 100%
 }
@@ -92,10 +197,6 @@
   list-style-image: none;
   list-style-position: outside;
   list-style-type: none;
-}
-
-#user-login .rpx-links {
-  padding-left: 0;
 }
 
 .rpx-button-social {

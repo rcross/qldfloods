@@ -1,5 +1,4 @@
 <?php
-// $Id: privatemsg.api.php,v 1.1.2.5.2.11 2011/01/17 16:40:49 berdir Exp $
 
 /**
  * @file
@@ -21,90 +20,16 @@
 
 /**
  * @defgroup sql Query Builder
- * Privatemsg does use its own simple query builder which allows to extend
- * SELECT-Queries in an easy way. The function _privatemsg_assemble_query
- * creates the query, based on an array $fragments with the following content.
- * Except primary_table, each key is an array itself to allow multiple values
  *
- *  - primary_table: The main table to select from
- *  - select: The fields that should be selected. This can be a simple field, a
- *    field with alias or even a subquery.
- *  - inner_join: The tables that should be joined. This is not specific to
- *    inner joins.
- *    Example: INNER JOIN pm_index pmi ON (pmi.mid = pm.mid)
- *  - where: The where conditions. The conditions are always AND, but it is
- *    possible to use OR inside a condition.
- *    Example: ⁽pmi.is_new = 1 OR pmi.deleted = 1)
- *  - order_by: Order By values, example: pm.timestamp ASC
- *  - query_args: It is possible to use the placeholders like %s in each part of
- *    the query. The values of query_args are then inserted into these.
- *    query_args consists of three arrays (join, where, having), one for each
- *    key that currently supports arguments.
+ * Query builder and related hooks
  *
- * Use _privatemsg_assemble_query
+ * Privatemsg uses SelectQuery combined with custom tags to allow to customize
+ * almost all SELECT queries. For more information about SelectQuery, see
+ * http://drupal.org/developing/api/database and http://drupal.org/node/310075.
  *
- * The privatemsg_assemble_query function takes a query_id as first argument
- * and optionally one or multiple arguments. query_id can either be a
- * string ('some_id') or an array('group_name', 'query_id'), if a string
- * is supplied, group_name defaults to 'privatemsg'. Returned is an array
- * with the keys 'query' (normal query) and 'count' (count query for pager).
+ * Arguments to a given query is stored in the metadata, with numerical keys
+ * (arg_%d) according to the position of the argument.
  *
- * For the actual query data, the function group_name_sql_query_id is executed,
- * this functions does have $fragments as first parameter and then the
- * optional parameters.
- *
- * A short example:
- * @code
- * // First, create the sql function.
- * function privatemsg_sql_getsubject(&$fragments, $mid, $uid) {
- *   // Set the primary table.
- *   $fragments['primary_table'] = '{pm_message} pm';
- *
- *   // Add a field.
- *   $fragments['select'][] = 'pm.subject';
- *
- *   // Join another table
- *   $fragment['inner_join'][] = 'INNER JOIN {pm_index} pi ON (pi.mid = pm.mid AND pi.uid = %d)';
- *   $fragment['query_args']['join'][] $uid;
- *
- *   // And finally add a condition.
- *   $fragments['where'][] = 'pm.mid = %d';
- *   $fragments['query_args']['where'][] = $mid;
- * }
- *
- * // Now we can use that query everywhere.
- * $query = _privatemsg_assemble_query('getsubject', 5);
- * $result = db_query($query['query']);
- * @endcode
- * Extend existing queries
- *
- * To extend a privatemsg query, use hook_group_name_sql_query_id_alter.
- * This hook does use the same parameters as the sql function.
- *
- * Example:
- * @code
- * function mymodule_privatemsg_sql_getsubject_alter(&$fragments, $mid) {
- * // we want to load the body too..
- *  $fragments['select'][] = 'pm.body';
- * }
- * @endcode
- *
- * - List of sql query hooks.
- *  - list: List of messages, Parameters: $fragments, $accounty
- *  - list_sent: List of sent messages, Parameters: $fragments, $accounty
- *  - load: Load a single message, Parameters: $fragments, $pmid, $account
- *  - messages: Load the messages of a thread,
- *    Parameters: $fragments, $thread_id, $account
- *  - autocomplete: Searching usernames for the autocomplete feature,
- *    Parameters: $fragments, $search, $names
- *  - participants: Loads all participants of a thread,
- *    Parameters: $fragments, $thread_id
- *  - unread_count: Number of unread messages for a user,
- *    Parameters: $fragments, $account
- *
- * - The following query_id's are used in pm_block_user
- *  - threadautors: Return all authors of one or multiple threads,
- *    Parameters: $fragments, $threads
  */
 
 /**
@@ -115,94 +40,91 @@
 /**
  * Query to search for autocomplete usernames.
  *
- * @param $fragments
- *   Query fragments
- * @param $search
- *   Search for that username
- * @param $names
- *   Names that are already in the list and are excluded
+ * @param $query
+ *   Query object
+ *
+ * @see privatemsg_sql_autocomplete()
+ * @see hook_query_alter()
  */
-function hook_privatemsg_sql_autocomplete_alter(&$fragments, $search, $names) {
+function hook_query_privatemsg_autocomplete_alter($query) {
   global $user;
-  // Extend the query that searches for usernames
 
-  // $fragments is explained in the api documentation in detail
+  $search = $query->getMetaData('arg_1');
+  $names = $query->getMetaData('arg_2');
 
-  // The query is already set up, it's searching for usernames which start with
-  // $search and are not $names (may be empty)
-  // the main table is {user} a
-
-  // for example, add a join on a table where the user connections are stored
+  // For example, add a join on a table where the user connections are stored
   // and specify that only users connected with the current user should be
   // loaded.
-  $fragments['inner_join'] = 'INNER JOIN {my_table} m ON (m.user1 = u.uid AND m.user2 = %d)';
-  $fragments['query_args'][] = $user->uid;
+  $query->innerJoin('my_table', 'm', 'm.user1 = u.uid AND m.user2 = :user2', array(':user2' => $user->uid));
 }
 
 /**
  * Display a list of threads.
  *
- * @param $fragments
- *   Query fragments
- * @param $account
- *   User object
- */
-function hook_privatemsg_sql_list_alter(&$fragment, $account) {
-
-}
-
-/**
- * Query definition to load a message.
+ * @param $query
+ *   Query object
  *
- * @param $fragments
- *   Query fragments array
- * @param $pmid
- *   the id of the message
- * @param $account
- *   User object of account for which to load the message
+ * @see privatemsg_sql_list()
+ * @see hook_query_alter()
  */
-function hook_privatemsg_sql_load_alter(&$fragment, $pmid, $account = NULL) {
-
+function hook_query_privatemsg_sql_list_alter($query) {
+  $account = $query->getMetaData('arg_1');
 }
+
 /**
  * Query definition to load messages of one or multiple threads.
  *
- * @param $fragments
- *   Query fragments array.
- * @param $threads
- *   Array with one or multiple thread id's.
- * @param $account
- *   User object for which the messages are being loaded.
- * @param $load_all
- *   Deleted messages are only loaded if this is set to TRUE.
+ * @param $query
+ *   Query object
+ *
+ * @see privatemsg_sql_messages()
+ * @see hook_query_alter()
  */
-function hook_privatemsg_sql_messages_alter(&$fragment, $threads, $account = NULL, $load_all = FALSE) {
-
+function hook_query_privatemsg_messages_alter($query) {
+  $threads = $query->getMetaData('arg_1');
+  $account = $query->getMetaData('arg_2');
+  $load_all = $query->getMetaData('arg_3');
 }
 
 /**
  * Alter the query that loads the participants of a thread.
  *
- * @param $fragments
- *   Query fragments
- * @param $thread_id
- *   Thread id, pmi.thread_id is the same as the mid of the first
- *   message of that thread
+ * @param $query
+ *   Query object
+ *
+ * @see privatemsg_sql_participants()
+ * @see hook_query_alter()
  */
-function hook_privatemsg_sql_participants_alter(&$fragment, $thread_id) {
-
+function hook_query_privatemsg_participants_alter($query) {
+  $thread_id = $query->getMetaData('arg_1');
+  $account = $query->getMetaData('arg_2');
 }
 
 /**
  * Loads all unread messages of a user (only the count query is used).
  *
- * @param $fragments
- *   Query fragments
- * @param $account
- *   User object
+ * @param $query
+ *   Query object
+ *
+ * @see privatemsg_sql_unread_count()
+ * @see hook_query_alter()
  */
-function hook_privatemsg_sql_unread_count_alter(&$fragment, $account) {
+function hook_query_privatemsg_unread_count_alter($query) {
+  $account = $query->getMetaData('arg_1');
+}
 
+/**
+ * Alter the query that loads deleted messages to flush them.
+ *
+ * @param $query
+ *   Query object
+ *
+ * @see privatemsg_sql_deleted()
+ * @see hook_query_alter()
+ */
+function hook_query_privatemsg_deleted_alter($query) {
+  $days = $query->getMetaData('arg_1');
+  $max = $query->getMetaData('arg_2');
 }
 
 /**
@@ -325,14 +247,14 @@ function hook_privatemsg_message_presave_alter(&$message) {
  * Act on the $vars before a message is displayed.
  *
  * This is called in the preprocess hook of the privatemsg-view template.
- * The $message data is aviable in $vars['message'].
+ * The $message data is available in $vars['message'].
  *
  * @param $var
  *   Template variables
  */
-function hook_privatemsg_message_view_alter(&$var) {
+function hook_privatemsg_message_view_alter(&$vars) {
   // add a link to each message
-  $vars['message_links'][] = array('title' => t('My link'), 'href' => '/path/to/my/action/'. $vars['message']['mid']);
+  $vars['message_links'][] = array('title' => t('My link'), 'href' => '/path/to/my/action/' . $vars['message']['mid']);
 }
 
 /**
@@ -401,7 +323,7 @@ function hook_privatemsg_message_recipient_changed($mid, $thread_id, $recipient,
  */
 function hook_privatemsg_block_message($author, $recipients, $context = array()) {
   $blocked = array();
-  foreach($recipients as $recipient_id => $recipient) {
+  foreach ($recipients as $recipient_id => $recipient) {
     // Deny/block if the recipient type is role and the account does not have
     // the necessary permission.
     if ($recipient->type == 'role' && $recipient->recipient == 2) {
@@ -455,6 +377,22 @@ function hook_privatemsg_thread_operations() {
 }
 
 /**
+ * Allows response to a status change.
+ *
+ * @param $pmid
+ *   Message id.
+ * @param $status
+ *   Either PRIVATEMSG_READ or PRIVATEMSG_UNREAD.
+ * @param $account
+ *   User object, defaults to the current user.
+ *
+ * @see privatemsg_message_change_status()
+ */
+function hook_privatemsg_message_status_changed($pmid, $status, $account) {
+
+}
+
+/**
  * @}
  */
 
@@ -504,7 +442,7 @@ function hook_privatemsg_thread_operations() {
  * - hook_privatemsg_name_lookup() - Convert a string to an
  *   recipient object
  *
- * Additionaly, there is also a hook_privatemsg_recipient_type_info_alter() that
+ * Additionally, there is also a hook_privatemsg_recipient_type_info_alter() that
  * allows to alter recipient type definitions.
  */
 
@@ -564,7 +502,7 @@ function hook_privatemsg_recipient_type_info() {
  * up the string.
  */
 function hook_privatemsg_name_lookup($string) {
-  $result = db_query("SELECT *, rid AS recipient FROM {role} WHERE name = '%s'", trim($role));
+  $result = db_query("SELECT *, rid AS recipient FROM {role} WHERE name = '%s'", trim($string));
   if ($role = db_fetch_object($result)) {
     $role->type = 'role';
     return $role;
@@ -580,11 +518,11 @@ function hook_privatemsg_name_lookup($string) {
  * @see hook_privatemsg_recipient_type_info()
  */
 function hook_privatemsg_recipient_type_info_alter(&$types) {
-  
+
 }
 
 /**
- * Allows to alter the found autocompletions.
+ * Allows to alter the found autocomplete suggestions.
  *
  * @param $matches
  *   Array of matching recipient objects.
@@ -626,7 +564,7 @@ function hook_privatemsg_name_lookup_matches(&$matches, $string) {
  *   An array which contains the thread ids on which the operation
  *   has been executed.
  * @param $account
- *   An user account object if an other user than the currrently logged in is
+ *   An user account object if an other user than the currently logged in is
  *   affected.
  *
  * @see privatemsg_operation_execute()

@@ -1,5 +1,4 @@
 <?php
-// $Id: page_secondary_links.inc,v 1.3 2010/12/31 21:22:26 merlinofchaos Exp $
 
 /**
  * @file
@@ -30,4 +29,12 @@ function ctools_page_secondary_links_content_type_render($subtype, $conf, $panel
   $block->content = theme('links', array('links' => menu_secondary_menu(), 'attributes' => array('class' => 'links secondary-links')));
 
   return $block;
+}
+
+/**
+ * Returns an edit form for custom type settings.
+ */
+function ctools_page_secondary_links_content_type_edit_form($form, &$form_state) {
+  // Empty so that we can have title override.
+  return $form;
 }

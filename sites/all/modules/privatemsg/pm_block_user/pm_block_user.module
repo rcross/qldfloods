@@ -1,5 +1,4 @@
 <?php
-// $Id: pm_block_user.module,v 1.1.2.8.2.24 2010/12/10 09:53:15 berdir Exp $
 
 /**
  * @file
@@ -17,7 +16,7 @@ define('PM_BLOCK_USER_DISALLOW_BLOCKING', 0);
 define('PM_BLOCK_USER_DISALLOW_SENDING', 1);
 
 /**
- * Implementation of hook_help().
+ * Implements hook_help().
  */
 function pm_block_user_help($path) {
   switch ($path) {
@@ -27,7 +26,7 @@ function pm_block_user_help($path) {
 }
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function pm_block_user_menu() {
   $items['messages/block/%user'] = array(
@@ -83,7 +82,7 @@ function pm_block_user_menu() {
 }
 
 /**
- * Implementation of hook_theme().
+ * Implements hook_theme().
  */
 function pm_block_user_theme() {
   return array(
@@ -224,7 +223,7 @@ function pm_block_user_has_blocked($author, $recipient) {
  */
 function _pm_block_user_rule_exists($author, $recipient, $action = PM_BLOCK_USER_DISALLOW_BLOCKING) {
   $block_actions = variable_get('pm_block_user_actions', array());
-  foreach ($block_actions as $delta => $details) {
+  foreach ($block_actions as $details) {
     // If this rule doesn't relate to $action, or it's disabled
     // ignore it and go to next loop iteration.
     if ($details['action'] != $action || !$details['enabled']) {
@@ -249,14 +248,14 @@ function _pm_block_user_rule_exists($author, $recipient, $action = PM_BLOCK_USER
 }
 
 /**
- * Implementation of hook_privatemsg_block_message.
+ * Implements hook_privatemsg_block_message.
  */
 function pm_block_user_privatemsg_block_message($author, $recipients, $context = array()) {
   $blocked = array();
   // Loop through each recipient and ensure there is no rule blocking this
   // author from sending them private messages. Use a reference, so when
-  // _privatemsg_user_load() is needed here the array is updated, negating the
-  // need for further calls to _privatemsg_user_load() later in the code.
+  // privatemsg_user_load_multiple() is needed here the array is updated, to
+  // avoid additional checks.
   foreach (array_keys($recipients) as $id) {
     // Only recipients of type user are currently supported.
     if (isset($recipients[$id]->type) && $recipients[$id]->type != 'user') {
@@ -265,7 +264,7 @@ function pm_block_user_privatemsg_block_message($author, $recipients, $context =
     // Ensure we have a recipient user object which includes roles.
     if (!isset($recipients[$id]->roles)) {
       $uid = str_replace('user_', '', $id);
-      $recipients[$id] = _privatemsg_user_load($uid);
+      $recipients[$id] = array_shift(privatemsg_user_load_multiple($uid));
     }
     // Note: this is checks whether the author may send the message (see third
     // parameter). Further below is a check whether the recipient may block it.
@@ -279,7 +278,7 @@ function pm_block_user_privatemsg_block_message($author, $recipients, $context =
 
   // Only user recipients are supported for now, remove others.
   $user_recipients = array();
-  foreach ($recipients as $key => $recipient) {
+  foreach ($recipients as $recipient) {
     if (empty($recipient->type)) {
       $recipient->type = 'user';
       $recipient->recipient = $recipient->uid;
@@ -318,7 +317,7 @@ function pm_block_user_query_privatemsg_message_load_multiple_alter($query) {
 }
 
 /**
- * Implementation of hook_privatemsg_message_view_alter.
+ * Implements hook_privatemsg_message_view_alter.
  */
 function pm_block_user_privatemsg_message_view_alter(&$vars) {
   global $user;
@@ -358,7 +357,7 @@ function pm_block_user_user_cancel($edit, $account, $method) {
 }
 
 /**
- * Implememts hook_query_TAG_alter().
+ * Implements hook_query_TAG_alter().
  *
  * Remove blocked users.
  */
@@ -366,7 +365,7 @@ function pm_block_user_query_privatemsg_autocomplete_alter($query) {
   global $user;
 
   // Assume the users don't have blocked more than a few dozen other users
-  // but there can be hundreds of thousends of users and make the subquery
+  // but there can be hundreds of thousands of users and make the subquery
   // unrelated.
 
   // Create a subquery that gets all users which have blocked the current user.
@@ -381,7 +380,7 @@ function pm_block_user_query_privatemsg_autocomplete_alter($query) {
   if ($user->uid != 1) {
     $rids = array();
     $block_actions = variable_get('pm_block_user_actions', array());
-    foreach ($block_actions as $delta => $details) {
+    foreach ($block_actions as $details) {
       // Only continue if the rule is enabled and is a disallow sending rule.
       if ($details['action'] != PM_BLOCK_USER_DISALLOW_SENDING || !$details['enabled']) {
         continue;

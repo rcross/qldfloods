@@ -1,7 +1,6 @@
 <?php
-// $Id: features-admin-components.tpl.php,v 1.1.2.2.2.2 2010/09/09 18:13:05 yhahn Exp $
 ?>
-<div class='clear-block features-components'>
+<div class='clearfix features-components'>
   <div class='column'>
     <div class='info'>
       <h3><?php print $name ?></h3>
@@ -13,10 +12,10 @@
     <div class='components'>
       <?php print $components ?>
       <?php if (!empty($key)): ?>
-        <div class='clear-block features-key'><?php print theme('links', $key) ?></div>
+        <div class='clearfix features-key'><?php print theme('links', array('links' => $key)) ?></div>
       <?php endif; ?>
       <?php if (!empty($buttons)): ?>
-        <div class='buttons clear-block'><?php print $buttons ?></div>
+        <div class='buttons clearfix'><?php print $buttons ?></div>
       <?php endif; ?>
     </div>
   </div>

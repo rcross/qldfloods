@@ -1,5 +1,4 @@
 <?php
-// $Id: views_handler_field_math.test,v 1.1.2.1 2010/12/24 14:05:39 dereine Exp $
 
 class ViewsHandlerFieldMath extends ViewsSqlTest {
   public static function getInfo() {
@@ -33,6 +32,6 @@ class ViewsHandlerFieldMath extends ViewsSqlTest {
 
     $this->executeView($view);
 
-    $this->assertEqual($rand1 + $rand2, $view->field['expression']->render($view->result[0]));
+    $this->assertEqual($rand1 + $rand2, $view->style_plugin->get_field(0, 'expression'));
   }
 }

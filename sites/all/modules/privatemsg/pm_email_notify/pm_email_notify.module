@@ -1,5 +1,4 @@
 <?php
-// $Id: pm_email_notify.module,v 1.1.2.3.2.23 2011/01/15 22:50:33 berdir Exp $
 
 /**
  * @file
@@ -29,7 +28,7 @@ function _pm_email_notify_is_enabled($uid) {
 }
 
 /**
- * Implementation of hook_privatemsg_message_insert().
+ * Implements hook_privatemsg_message_insert().
  */
 function pm_email_notify_privatemsg_message_insert($message) {
   foreach ($message->recipients as $recipient) {
@@ -38,13 +37,14 @@ function pm_email_notify_privatemsg_message_insert($message) {
       // send them a new pm notification email if they did
       $params['recipient'] = $recipient;
       $params['message'] = $message;
-      drupal_mail('pm_email_notify', 'notice', $recipient->mail, user_preferred_language($recipient), $params, variable_get('pm_email_notify_from',''));
+      $from = variable_get('pm_email_notify_from', '');
+      drupal_mail('pm_email_notify', 'notice', $recipient->mail, user_preferred_language($recipient), $params, !empty($from) ? $from : NULL);
     }
   }
 }
 
 /**
- * Implementation of hook_mail().
+ * Implements hook_mail().
  */
 function pm_email_notify_mail($key, &$message, $params) {
   switch ($key) {
@@ -96,7 +96,7 @@ function pm_email_notify_form_alter(&$form, &$form_state, $form_id) {
  * Implements hook_user_update().
  */
 function pm_email_notify_user_update(&$edit, $account, $category) {
-  if (isset($edit['pm_send_notifications']) && privatemsg_user_access('read privatemsg')) {
+  if (isset($edit['pm_send_notifications']) && privatemsg_user_access('read privatemsg', $account)) {
     db_merge('pm_email_notify')
       ->fields(array('email_notify_is_enabled' => $edit['pm_send_notifications']))
       ->key(array('user_id' => $account->uid))

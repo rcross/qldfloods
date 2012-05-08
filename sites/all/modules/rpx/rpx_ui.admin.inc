@@ -365,6 +365,7 @@ function rpx_admin_settings_submit($form, &$form_state) {
   variable_del('rpx_app_id');
   variable_del('rpx_social_pub');
   variable_del('rpx_admin_url');
+  variable_del('rpx_mapping_api');
 
   $lookup = variable_get('rpx_lookup_results');
   variable_del('rpx_lookup_results');
@@ -375,6 +376,9 @@ function rpx_admin_settings_submit($form, &$form_state) {
   variable_set('rpx_app_id', $lookup['appId']);
   variable_set('rpx_social_pub', $lookup['socialPub']);
   variable_set('rpx_admin_url', $lookup['adminUrl']);
+
+  $use_mapping_api = strpos($lookup['capabilities'], 'mapping_api');
+  variable_set('rpx_mapping_api', ($use_mapping_api === FALSE) ? 0 : 1);
 
   $providers = RPX::get_enabled_providers($lookup['realm'], $lookup['realmScheme']);
   variable_set('rpx_enabled_providers', $providers);
@@ -411,6 +415,7 @@ function rpx_admin_reset_confirm_submit($form, &$form_state) {
   variable_del('rpx_attach_login_form');
   variable_del('rpx_bypass_email_verification');
   variable_del('rpx_extended_authinfo');
+  variable_del('rpx_mapping_api');
   variable_del('rpx_force_registration_form');
   variable_del('rpx_import_profile_photo');
   variable_del('rpx_javascript_global');
@@ -449,6 +454,8 @@ function rpx_admin_reset_confirm_submit($form, &$form_state) {
 function rpx_mapping_settings_form($form, &$form_state) {
   $catalog = _rpx_drupal_field_catalog();
   $map = variable_get('rpx_profile_fields_map', array());
+  $map[] = array();
+
   $rpx_fields = db_query("SELECT fid, path FROM {rpx_profile_field}")->fetchAllAssoc('fid', PDO::FETCH_ASSOC);
 
   foreach ($map as $mid => $mapping) {
@@ -492,12 +499,21 @@ function rpx_mapping_settings_form($form, &$form_state) {
         '#description' => t('Field.'),
         '#attributes' => array('class' => array('field-select', 'mid-' . $mid)),
       ),
-      'edit' => array(
+    );
+    if (isset($mapping['fid'])) {
+      $edit = array(
         '#type' => 'link',
         '#title' => t('edit'),
         '#href' => "admin/config/people/rpx/mapping/edit/$mid",
-      ),
-    );
+      );
+    }
+    else {
+      $edit = array(
+        '#type' => 'markup',
+        '#markup' => '&nbsp;',
+      );
+    }
+    $form[$mid]['edit'] = $edit;
   }
 
   if (count($form)) {
@@ -598,7 +614,7 @@ function rpx_profile_field_delete_submit($form, &$form_state) {
   cache_clear_all();
 
   drupal_set_message(t('The Engage field %field has been deleted.', array('%field' => $form_state['values']['title'])));
-  watchdog('rpx_ui', 'Engage field %field deleted.', array('%field' => $form_state['values']['title']), WATCHDOG_NOTICE, l(t('view'), 'admin/config/people/rpx/profile'));
+  watchdog('rpx_ui', 'Engage field %field deleted.', array('%field' => $form_state['values']['title']), WATCHDOG_NOTICE, l(t('view'), 'admin/config/people/rpx/fields'));
 
   $form_state['redirect'] = 'admin/config/people/rpx/fields';
   return;
@@ -682,16 +698,10 @@ function rpx_profile_field_overview_form($form, &$form_state) {
   );
 
   $form['#tree'] = TRUE;
+  $form['#validate'][] = '_rpx_profile_field_forms_validate';
+  $form['#submit'][] = '_rpx_profile_field_forms_submit';
 
   return $form;
-}
-
-function rpx_profile_field_overview_form_validate($form, &$form_state) {
-  _rpx_profile_field_forms_validate($form, $form_state);
-}
-
-function rpx_profile_field_overview_form_submit($form, &$form_state) {
-  _rpx_profile_field_forms_submit($form, $form_state);
 }
 
 /**
@@ -702,17 +712,9 @@ function rpx_profile_field_reset_confirm ($form, &$form_state) {
 }
 
 /**
- * Process fields reset form submissions.
- *
- * Reset Engage fields by deleting all existing fields and creating default ones
- * (those that are created at module installation). As fid's are going to
- * change, also delete mappings and their records in the rpx_mapping_provider
- * table.
+ * Inserts default values to rpx_profile_field.
  */
-function rpx_profile_field_reset_confirm_submit($form, &$form_state) {
-  db_delete('rpx_profile_field')
-    ->execute();
-
+function _rpx_profile_field_insert_defaults() {
   $fields = array(
     array('First Name', "['profile']['name']['givenName']"),
     array('Last Name', "['profile']['name']['familyName']"),
@@ -728,9 +730,23 @@ function rpx_profile_field_reset_confirm_submit($form, &$form_state) {
   );
   foreach ($fields as $field) {
     db_insert('rpx_profile_field')
-      ->fields(array('title' => $field[0], 'path' => $field[1]))
+      ->fields(array('title' => $field[0], 'path' => $field[1], 'parsed_path' => serialize(_rpx_parse_path($field[1]))))
       ->execute();
   }
+}
+
+/**
+ * Process fields reset form submissions.
+ *
+ * Reset Engage fields by deleting all existing fields and creating default ones
+ * (those that are created at module installation). As fid's are going to
+ * change, also delete mappings and their records in the rpx_mapping_provider
+ * table.
+ */
+function rpx_profile_field_reset_confirm_submit($form, &$form_state) {
+  db_query("DELETE FROM {rpx_profile_field}");
+
+  _rpx_profile_field_insert_defaults();
 
   // Delete field map.
   variable_set('rpx_profile_fields_map', array());
@@ -754,7 +770,7 @@ function rpx_profile_field_edit_form($form, &$form_state, $arg = NULL) {
   if (is_numeric($arg)) {
     $fid = $arg;
 
-    $field = db_query('SELECT * FROM {rpx_profile_field} WHERE fid = :fid', array('fid' => $fid))->fetchAssoc();
+    $field = db_query('SELECT fid, title, path FROM {rpx_profile_field} WHERE fid = :fid', array('fid' => $fid))->fetchAssoc();
 
     if (!$field) {
       drupal_not_found();
@@ -808,19 +824,43 @@ An example path is <code>['profile']['verifiedEmail']</code> or <code>['merged_p
 
   $form['#tree'] = TRUE;
 
+  $form['#validate'][] = '_rpx_profile_field_forms_validate';
+  $form['#submit'][] = '_rpx_profile_field_forms_submit';
+
   return $form;
-}
-
-function rpx_profile_field_edit_form_validate($form, &$form_state) {
-  _rpx_profile_field_forms_validate($form, $form_state);
-}
-
-function rpx_profile_field_edit_form_submit($form, &$form_state) {
-  _rpx_profile_field_forms_submit($form, $form_state);
 }
 
 function _rpx_profile_path_validate_error() {
   form_set_error('_edit_field][path', t('The specified path is not valid. Please check that it does not contain spaces or any other special characters except brackets ([]) and apostrophe (\'), and it would make a valid PHP array reference if appended to an array variable.'));
+}
+
+/**
+ * Extract path components.
+ *
+ * @param string $path
+ * @return array
+ */
+function _rpx_parse_path($path) {
+  $path = trim($path, '[]');
+  $parts = explode('][', $path);
+  if (!empty($parts)) {
+    $parsed = array();
+    foreach ($parts as $part) {
+      if (is_numeric($part)) {
+        $parsed[] = intval($part);
+      }
+      elseif (preg_match("/^\'([a-z0-9_]+)\'$/i", $part, $matches)) {
+        $parsed[] = $matches[1];
+      }
+      else {
+        return NULL;
+      }
+    }
+    return $parsed;
+  }
+  else {
+    return NULL;
+  }
 }
 
 /**
@@ -838,17 +878,12 @@ function _rpx_profile_field_forms_validate($form, &$form_state) {
     form_set_error('_edit_field][path', t('You need to provide a data path.'));
   }
 
-  // Validate the data path by first checking the characters and then by
-  // constructing a (bogus) PHP array reference and evaluating it.
-  if (preg_match("/[^\[\]a-zA-Z0-9_']/", $field['path'])) {
-    _rpx_profile_path_validate_error();
+  // Validate the data path by parsing it, also save parsed path to values.
+  $parsed_path = _rpx_parse_path($field['path']);
+  if ($parsed_path) {
+    $form_state['values']['_edit_field']['parsed_path'] = $parsed_path;
   }
-  // Use isset() to avoid the "undefined index" notice.
-$test = <<<EOT
-  isset(\$test_array{$field['path']});
-  return TRUE;
-EOT;
-  if (!eval($test)) {
+  else {
     _rpx_profile_path_validate_error();
   }
 
@@ -883,17 +918,17 @@ function _rpx_profile_field_forms_submit($form, &$form_state) {
   $field = $form_state['values']['_edit_field'];
 
   // Remove all elements that are not rpx_profile_field columns.
-  $values = array_intersect_key($field, array_flip(array('title', 'path')));
+  $values = array_intersect_key($field, array_flip(array('title', 'path', 'parsed_path')));
   if (!isset($field['fid'])) {
     db_insert('rpx_profile_field')
-      ->fields($values)
+      ->fields(array('title' => $values['title'], 'path' => $values['path'], 'parsed_path' => serialize($values['parsed_path'])))
       ->execute();
     drupal_set_message(t('The field has been created.'));
-    watchdog('rpx_ui', 'Engage profile field %field added with path %path.', array('%field' => $field['title'], '%path' => $field['path']), WATCHDOG_NOTICE, l(t('view'), 'admin/config/people/rpx/profile'));
+    watchdog('rpx_ui', 'Engage profile field %field added with path %path.', array('%field' => $field['title'], '%path' => $field['path']), WATCHDOG_NOTICE, l(t('view'), 'admin/config/people/rpx/fields'));
   }
   else {
     db_update('rpx_profile_field')
-      ->fields($values)
+      ->fields(array('title' => $values['title'], 'path' => $values['path'], 'parsed_path' => serialize($values['parsed_path'])))
       ->condition('fid', $field['fid'])
       ->execute();
     drupal_set_message(t('The field has been updated.'));
@@ -903,16 +938,6 @@ function _rpx_profile_field_forms_submit($form, &$form_state) {
 
   $form_state['redirect'] = 'admin/config/people/rpx/fields';
   return;
-}
-
-/**
- * Menu callback: Add a new Engage to Drupal data mapping.
- */
-function rpx_profile_mapping_create() {
-  $map = variable_get('rpx_profile_fields_map', array());
-  $map[] = array();
-  variable_set('rpx_profile_fields_map', $map);
-  drupal_goto('admin/config/people/rpx/mapping');
 }
 
 /*
@@ -998,15 +1023,15 @@ function rpx_profile_mapping_edit_form($form, &$form_state, $arg = NULL) {
   );
   $form['field_update']['options'] = array(
     '#type' => 'radios',
-    '#title' => t('Data mapping logic for linked accounts'),
+    '#title' => t('Data mapping logic for 3rd party accounts'),
     '#default_value' => isset($map[$mid]['update']) ? $map[$mid]['update'] : RPX_UPDATE_NONE,
     '#options' => array(
-      RPX_UPDATE_NONE => t('Do not update the data field when a linked account is added (default)'),
-      RPX_UPDATE_EMPTY => t('Only update the data field if it is empty when a linked account is added'),
-      RPX_UPDATE_ALWAYS => t('Update the data field (including overwriting existing data) when any
+      RPX_UPDATE_NONE => t('Do not update the data field upon user login or when a linked account is added (default)'),
+      RPX_UPDATE_EMPTY => t('Only update the data field if it is empty at user login or when a linked account is added'),
+      RPX_UPDATE_ALWAYS => t('Update the data field (including overwriting existing data) at user login or when any
 linked account is added'),
-      RPX_UPDATE_ADD => t('Update the data field as an additional value (but do not overwrite existing data) when a linked account is added. (This will only work for fields that allow multiple values.)'),
-      RPX_UPDATE_MAYBE => t('Update the data field (including overwriting existing data) only when a higher priority linked account is added (use the table below to set priorities)'),
+      RPX_UPDATE_ADD => t('Update the data field as an additional value (but do not overwrite existing data) at user login or when a linked account is added (this will only work for fields that allow multiple values)'),
+      RPX_UPDATE_MAYBE => t('Update the data field (including overwriting existing data) only when a higher priority provider account is linked or used to login (use the table below to set priorities)'),
     ),
   );
   $form['field_update']['providers'] = array(
@@ -1232,5 +1257,5 @@ function theme_rpx_provider_weight_table($variables) {
   }
   $header = array(t('Provider'), t('Select'), t('Weight'));
   drupal_add_tabledrag('rpx-mapping-providers', 'order', 'sibling', 'rpx-mapping-provider-weight');
-  return theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'rpx-mapping-providers'), 'caption' => 'Weight table: for the data mapping, select linked account providers and arrange them from highest priority (top) to lowest priority (bottom).  Selected providers with higher priority have data that takes precedence over those with lower priority.'));
+  return theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'rpx-mapping-providers'), 'caption' => 'Weight table: for the data mapping, select 3rd party account providers and arrange them from highest priority (top) to lowest priority (bottom).  Selected providers with higher priority have data that takes precedence over those with lower priority.'));
 }

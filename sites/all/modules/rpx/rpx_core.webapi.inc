@@ -11,6 +11,8 @@
 class RPX {
   const lookup_api = 'https://rpxnow.com/plugin/lookup_rp';
   const auth_api = 'https://rpxnow.com/api/v2/auth_info';
+  const map_api = 'https://rpxnow.com/api/v2/map';
+  const unmap_api = 'https://rpxnow.com/api/v2/unmap';
 
   /**
    * Performs a lookup_rp request.
@@ -27,7 +29,8 @@ class RPX {
   static function lookup($api_key) {
     global $base_url;
 
-    $post_data = 'apiKey=' . $api_key . '&format=json';
+    $post_data = 'apiKey=' . $api_key . '&format=json&pluginName=Drupal&pluginVersion=' . RPX_MODULE_VERSION;
+
     $headers = array(
       'Referer' => $base_url,
       'User-Agent' => 'Janrain_Engage_Drupal_Module',
@@ -46,7 +49,7 @@ class RPX {
       return $result->data;
     }
     if (isset($result->error)) {
-      RPX::report_error($result);
+      RPX::report_http_error($result);
       return FALSE;
     }
 
@@ -88,8 +91,77 @@ class RPX {
     $result = drupal_http_request(RPX::auth_api, $options);
 
     if(isset($result->error)) {
-      RPX::report_error($result);
+      RPX::report_http_error($result);
       return FALSE;
+    }
+
+    return json_decode($result->data, TRUE);
+  }
+
+  /**
+   * Performs a map request.
+   *
+   * @param string $api_key
+   *   The API key for the Engage App instance we are using.
+   * @param string $authname
+   *   The identifier we are mapping to a Drupal uid.
+   * @param string $uid
+   *   The Drupal user ID we are mapping to.
+   * @return
+   *   An array of RPX request info (stat, err, etc.)
+   *
+   * @see http://rpxnow.com/docs
+   */
+  static function map($api_key, $authname, $uid) {
+    $post_data = 'apiKey='.$api_key . '&identifier='.$authname . '&primaryKey='.$uid . '&overwrite=true';
+
+    $options['data'] = $post_data;
+    $options['method'] = 'POST';
+
+    $result = drupal_http_request(RPX::map_api, $options);
+
+    if(isset($result->error)) {
+      RPX::report_http_error($result);
+    }
+
+    return json_decode($result->data, TRUE);
+  }
+
+  /**
+   * Performs an unmap request.
+   *
+   * @param string $api_key
+   *   The API key for the Engage App instance we are using.
+   * @param string $authname
+   *   The identifier we are unlinking from a Drupal uid.
+   * @param string $uid
+   *   The Drupal user ID we are unlinking for.
+   * @param boolean $all
+   *   Set to TRUE if we should unmap all identifiers mapped to $uid (for example,
+   *   when user is deleted.)
+   *
+   * @return
+   *   An array of RPX request info (stat, err, etc.)
+   *
+   * @see http://rpxnow.com/docs
+   */
+  static function unmap($api_key, $authname, $uid, $all = FALSE) {
+    $post_data = 'apiKey='.$api_key . '&primaryKey='.$uid;
+
+    if ($all) {
+      $post_data .= '&all_identifiers=true';
+    }
+    else {
+      $post_data .= '&identifier='.$authname;
+    }
+
+    $options['data'] = $post_data;
+    $options['method'] = 'POST';
+
+    $result = drupal_http_request(RPX::unmap_api, $options);
+
+    if(isset($result->error)) {
+      RPX::report_http_error($result);
     }
 
     return json_decode($result->data, TRUE);
@@ -116,7 +188,7 @@ class RPX {
     $result = drupal_http_request($url);
 
     if(isset($result->error)) {
-      RPX::report_error($result);
+      RPX::report_http_error($result);
       return '';
     }
 
@@ -131,9 +203,8 @@ class RPX {
   /**
    * Helper function for the Engage web API wrappers.
    */
-  static function report_error($result) {
+  static function report_http_error($result) {
     watchdog('rpx_core', 'Engage web API seems to be inaccessible due to "%error".', array('%error' => $result->code . ' ' . $result->error), WATCHDOG_WARNING);
     drupal_set_message(t('Engage web API seems to be inaccessible because of error "%error".', array('%error' => $result->code . ' ' . $result->error)), 'error');
   }
 }
-

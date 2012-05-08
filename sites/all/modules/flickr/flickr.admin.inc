@@ -1,5 +1,4 @@
 <?php
-// $Id: flickr.admin.inc,v 1.2.2.1 2010/09/26 07:26:10 paulbooker Exp $
 
 /**
  * @file

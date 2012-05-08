@@ -1,5 +1,4 @@
 <?php
-// $Id: terms.inc,v 1.10 2010/10/15 21:06:58 merlinofchaos Exp $
 
 /**
  * @file
@@ -16,6 +15,7 @@ $plugin = array(
   'description' => t('Multiple taxonomy terms, as a group.'),
   'context' => 'ctools_context_create_terms',
   'keyword' => 'terms',
+  // This context is deprecated and should not be usable in the UI.
   'no ui' => TRUE,
   'context name' => 'terms',
   'convert list' => array(
@@ -38,7 +38,7 @@ function ctools_context_create_terms($empty, $data = NULL, $conf = FALSE) {
   // The input is expected to be an object as created by ctools_break_phrase
   // which contains a group of terms.
 
-  $context = new ctools_context(array('terms', 'term'));
+  $context = new ctools_context(array('terms', 'entity:taxonomy_term'));
   $context->plugin = 'terms';
 
   if ($empty) {
@@ -81,7 +81,7 @@ function ctools_context_terms_convert($context, $type) {
           $context->names = '';
         }
         else {
-          $result = db_query('SELECT tid, name FROM {taxonomy_term_data} WHERE tid IN :tids', array(':tids' => $context->tids));
+          $result = db_query('SELECT tid, name FROM {taxonomy_term_data} WHERE tid IN (:tids)', array(':tids' => $context->tids));
           foreach ($result as $term) {
             $names[$term->tid] = $term->name;
             if ($type == 'names_dashed') {

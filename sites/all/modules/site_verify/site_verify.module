@@ -1,5 +1,5 @@
 <?php
-// $Id: site_verify.module,v 1.11 2010/01/27 01:54:16 davereid Exp $
+// $Id: site_verify.module,v 1.17 2011/02/20 22:37:54 davereid Exp $
 
 /**
  * Implements hook_menu().
@@ -26,26 +26,23 @@ function site_verify_menu() {
     'page arguments' => array('site_verify_edit_form', array(), 5),
     'access arguments' => array('administer site configuration'),
     'file' => 'site_verify.admin.inc',
-    'type' => MENU_CALLBACK,
   );
-  $items['admin/config/search/verifications/edit/%site_verify'] = array(
+  $items['admin/config/search/verifications/%site_verify/edit'] = array(
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('site_verify_edit_form', 5),
+    'page arguments' => array('site_verify_edit_form', 4),
     'access arguments' => array('administer site configuration'),
     'file' => 'site_verify.admin.inc',
-    'type' => MENU_CALLBACK,
   );
-  $items['admin/config/search/verifications/delete/%site_verify'] = array(
+  $items['admin/config/search/verifications/%site_verify/delete'] = array(
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('site_verify_delete_form', 5),
+    'page arguments' => array('site_verify_delete_form', 4),
     'access arguments' => array('administer site configuration'),
     'file' => 'site_verify.admin.inc',
-    'type' => MENU_CALLBACK,
   );
 
   // Add the verification paths.
-  $query = db_query("SELECT svid, file FROM {site_verify} WHERE file <> ''");
-  foreach ($query as $verification) {
+  $verifications = db_query("SELECT svid, file FROM {site_verify} WHERE file <> ''")->fetchAll();
+  foreach ($verifications as $verification) {
     $items[$verification->file] = array(
       'page callback' => 'site_verify_output',
       'page arguments' => array((string) $verification->svid),
@@ -59,13 +56,19 @@ function site_verify_menu() {
 
 /**
  * Implements hook_init().
+ *
+ * @todo Move this to hook_html_head_alter()?
  */
 function site_verify_init() {
   // Add the verification meta tags to the front page.
   if (drupal_is_front_page()) {
-    $meta_tags = db_query("SELECT meta FROM {site_verify} WHERE meta <> ''")->fetchCol();
-    foreach ($meta_tags as $meta_tag) {
-      drupal_add_html_head($meta_tag);
+    $meta_tags = db_query("SELECT svid, meta FROM {site_verify} WHERE meta <> ''")->fetchAllKeyed();
+    foreach ($meta_tags as $svid => $meta_tag) {
+      $data = array(
+        '#type' => 'markup',
+        '#markup' => $meta_tag . "\n",
+      );
+      drupal_add_html_head($data, 'site_verify:' . $svid);
     }
   }
 }

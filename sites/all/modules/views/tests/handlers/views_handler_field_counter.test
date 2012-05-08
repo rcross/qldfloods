@@ -1,7 +1,6 @@
 <?php
-// $Id: views_handler_field_counter.test,v 1.1.2.2 2010/12/27 08:43:31 dereine Exp $
 
-class viewsHandlerFilterCounterTest extends ViewsSqlTest {
+class ViewsHandlerFilterCounterTest extends ViewsSqlTest {
   public static function getInfo() {
     return array(
       'name' => 'Field: Counter',

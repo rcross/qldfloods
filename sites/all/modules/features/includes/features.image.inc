@@ -1,8 +1,7 @@
 <?php
-// $Id: features.image.inc,v 1.1.2.3 2010/09/17 21:07:59 yhahn Exp $
 
 /**
- * Implementation of hook_features_api().
+ * Implements hook_features_api().
  */
 function image_features_api() {
   return array(
@@ -10,12 +9,13 @@ function image_features_api() {
       'name' => t('Image styles'),
       'feature_source' => TRUE,
       'default_hook' => 'image_default_styles',
+      'alter_hook' => 'image_styles',
     )
   );
 }
 
 /**
- * Implementation of hook_features_export_options().
+ * Implements hook_features_export_options().
  */
 function image_features_export_options() {
   $options = array();
@@ -26,7 +26,7 @@ function image_features_export_options() {
 }
 
 /**
- * Implementation of hook_features_export().
+ * Implements hook_features_export().
  */
 function image_features_export($data, &$export, $module_name = '') {
   $pipe = array();
@@ -47,7 +47,7 @@ function image_features_export($data, &$export, $module_name = '') {
 }
 
 /**
- * Implementation of hook_features_export_render().
+ * Implements hook_features_export_render().
  */
 function image_features_export_render($module_name, $data, $export = NULL) {
   $code = array();
@@ -69,7 +69,7 @@ function image_features_export_render($module_name, $data, $export = NULL) {
 }
 
 /**
- * Implementation of hook_features_revert().
+ * Implements hook_features_revert().
  */
 function image_features_revert($module) {
   if ($default_styles = features_get_default('image')) {

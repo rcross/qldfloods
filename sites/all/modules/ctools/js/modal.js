@@ -1,4 +1,3 @@
-// $Id: modal.js,v 1.27 2010/12/31 22:27:02 merlinofchaos Exp $
 /**
  * @file
  *
@@ -201,7 +200,7 @@
         });
         */
 
-      $('a.ctools-use-modal:not(.ctools-use-modal-processed)', context)
+      $('area.ctools-use-modal:not(.ctools-use-modal-processed), a.ctools-use-modal:not(.ctools-use-modal-processed)', context)
         .addClass('ctools-use-modal-processed')
         .click(Drupal.CTools.Modal.clickAjaxLink)
         .each(function () {
@@ -245,10 +244,6 @@
       $('#modal-content form:not(.ctools-use-modal-processed)', context)
         .addClass('ctools-use-modal-processed')
         .each(function() {
-          $('input[type=submit], button', this).click(function() {
-            this.form.clk = this;
-          });
-
           var element_settings = {};
 
           element_settings.url = $(this).attr('action');
@@ -258,7 +253,22 @@
 
           Drupal.ajax[base] = new Drupal.ajax(base, this, element_settings);
           Drupal.ajax[base].form = $(this);
+
+          $('input[type=submit], button', this).click(function() {
+            Drupal.ajax[base].element = this;
+            this.form.clk = this;
+          });
+
         });
+
+      // Bind a click handler to allow elements with the 'ctools-close-modal'
+      // class to close the modal.
+      $('.ctools-close-modal', context).once('ctools-close-modal-processed', function () {
+        $(this).click(function() {
+          Drupal.CTools.Modal.dismiss();
+          return false;
+        });
+      });
     }
   };
 
@@ -268,6 +278,9 @@
    * AJAX responder command to place HTML within the modal.
    */
   Drupal.CTools.Modal.modal_display = function(ajax, response, status) {
+    if ($('#modalContent').length == 0) {
+      Drupal.CTools.Modal.show(Drupal.CTools.Modal.getSettings(ajax.element));
+    }
     $('#modal-title').html(response.title);
     $('#modal-content').html(response.output);
     Drupal.attachBehaviors();
@@ -384,6 +397,14 @@
         event = window.event;
         target = event.srcElement;
       }
+
+      var parents = $(target).parents().get();
+      for (var i in $(target).parents().get()) {
+        var position = $(parents[i]).css('position');
+        if (position == 'absolute' || position == 'fixed') {
+          return true;
+        }
+      }
       if( $(target).filter('*:visible').parents('#modalContent').size()) {
         // allow the event only if target is a visible child node of #modalContent
         return true;
@@ -405,6 +426,16 @@
     modalContentClose = function(){close(); return false;};
     $('.close').bind('click', modalContentClose);
 
+    // Bind a keypress on escape for closing the modalContent
+    modalEventEscapeCloseHandler = function(event) {
+      if (event.keyCode == 27) {
+        close();
+        return false;
+      }
+    };
+
+    $(document).bind('keypress', modalEventEscapeCloseHandler);
+
     // Close the open modal content and backdrop
     function close() {
       // Unbind the events
@@ -412,6 +443,7 @@
       $('body').unbind( 'focus', modalEventHandler);
       $('body').unbind( 'keypress', modalEventHandler );
       $('.close').unbind('click', modalContentClose);
+      $('body').unbind('keypress', modalEventEscapeCloseHandler);
       $(document).trigger('CToolsDetachBehaviors', $('#modalContent'));
 
       // Set our animation parameters and use them

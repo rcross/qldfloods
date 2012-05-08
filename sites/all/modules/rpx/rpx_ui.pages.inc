@@ -24,7 +24,8 @@ function rpx_user_identities($account) {
     );
   }
 
-  rpx_js();
+  rpx_js(TRUE);
+
   $realm = variable_get('rpx_realm', '');
   $realm_scheme = variable_get('rpx_realm_scheme', 'http');
   $sign_in_url = "$realm_scheme://$realm/openid/v2/signin";
@@ -162,6 +163,7 @@ function rpx_user_delete_form_submit($form, &$form_state) {
       'provider_machinename' => $linked_account->provider_name,
       'provider_title' => $linked_account->provider_title,
     );
+    _rpx_delete_engage_mapping($linked_account->authname, $uid);
     module_invoke_all('rpx_linked_account', 'deleted', $account);
   }
   else {

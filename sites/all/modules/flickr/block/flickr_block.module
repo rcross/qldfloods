@@ -1,5 +1,4 @@
 <?php
-// $Id: flickr_block.module,v 1.16.2.2 2010/09/29 22:32:29 paulbooker Exp $
 
 /**
  * Implements hook_block_info().

@@ -1,5 +1,4 @@
 <?php
-// $Id: privatemsg.views.inc,v 1.1.4.3 2011/01/20 12:47:31 berdir Exp $
 /**
  * @file
  * Provide views data and handlers for privatemsg.module

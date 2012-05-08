@@ -1,5 +1,4 @@
 <?php
-// $Id: destinations.s3.inc,v 1.2.2.1 2010/12/28 06:24:07 ronan Exp $
 
 
 /**
@@ -14,12 +13,14 @@
  */
 class backup_migrate_destination_s3 extends backup_migrate_destination_remote {
   var $supported_ops = array('scheduled backup', 'manual backup', 'restore', 'list files', 'configure', 'delete');
-  var $s3 = NULL; 
+  var $s3 = NULL;
+  var $cache_files = TRUE;
+
 
   /**
    * Save to to the s3 destination.
    */
-  function save_file($file, $settings) {
+  function _save_file($file, $settings) {
     if ($s3 = $this->s3_object()) {
       $path = $file->filename();
       if ($s3->putObject($s3->inputFile($file->filepath(), FALSE), $this->get_bucket(), $this->remote_path($file->filename()), S3::ACL_PRIVATE)) {
@@ -47,7 +48,7 @@ class backup_migrate_destination_s3 extends backup_migrate_destination_remote {
   /**
    * Delete from the s3 destination.
    */
-  function delete_file($file_id) {
+  function _delete_file($file_id) {
     if ($s3 = $this->s3_object()) {
       $s3->deleteObject($this->get_bucket(), $this->remote_path($file_id));
     }
@@ -56,7 +57,7 @@ class backup_migrate_destination_s3 extends backup_migrate_destination_remote {
   /**
    * List all files from the s3 destination.
    */
-  function list_files() {
+  function _list_files() {
     backup_migrate_include('files');
     $files = array();
     if ($s3 = $this->s3_object()) {
@@ -158,18 +159,26 @@ class backup_migrate_destination_s3 extends backup_migrate_destination_remote {
   }
 
   function s3_object() {
-    if (file_exists('./'. drupal_get_path('module', 'backup_migrate') .'/includes/S3.php')) {
-      require_once './'. drupal_get_path('module', 'backup_migrate') .'/includes/S3.php';
-      if (!$this->s3 && !empty($this->dest_url['user'])) {
-        $this->s3 = new S3($this->dest_url['user'], $this->dest_url['pass']);
-      }
-      return $this->s3;
+    // Try to use libraries module if available to find the path.
+    if (function_exists('libraries_get_path')) {
+      $library_paths[] = libraries_get_path('s3-php5-curl');
     }
     else {
-      drupal_set_message(t('Due to drupal.org code hosting policies, the S3 library needed to use an S3 destination is no longer distributed with this module. You must download the library from !link and place it in the includes directory in the Backup and Migrate module directory.', array('!link' => l('http://undesigned.org.za/2007/10/22/amazon-s3-php-class', 'http://undesigned.org.za/2007/10/22/amazon-s3-php-class'))), 'error', FALSE);
-      return NULL;
+      $library_paths[] = 'sites/all/libraries/s3-php5-curl';
     }
+    $library_paths[] = drupal_get_path('module', 'backup_migrate') . '/includes/s3-php5-curl';
+    $library_paths[] = drupal_get_path('module', 'backup_migrate') . '/includes';
+
+    foreach($library_paths as $path) {
+      if (file_exists($path . '/S3.php')) {
+        require_once $path . '/S3.php';
+        if (!$this->s3 && !empty($this->dest_url['user'])) {
+          $this->s3 = new S3($this->dest_url['user'], $this->dest_url['pass']);
+        }
+        return $this->s3;
+      }
+    }
+    drupal_set_message(t('Due to drupal.org code hosting policies, the S3 library needed to use an S3 destination is no longer distributed with this module. You must download the library from !link and place it in one of these locations: %locations.', array('%locations' => implode(', ', $library_paths), '!link' => l('http://undesigned.org.za/2007/10/22/amazon-s3-php-class', 'http://undesigned.org.za/2007/10/22/amazon-s3-php-class'))), 'error', FALSE);
+    return NULL;
   }
 }
-
-

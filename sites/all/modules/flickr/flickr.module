@@ -1,5 +1,4 @@
 <?php
-// $Id: flickr.module,v 1.43.2.2 2010/09/29 22:32:29 paulbooker Exp $
 
 require_once(drupal_get_path('module', 'flickr') . '/flickr.inc');
 
@@ -120,15 +119,11 @@ function flickr_photos_access($account) {
           user_access('view own flickr photos') && $GLOBALS['user']->uid == $account->uid
         );
     }
-    else {
-      // drupal_set_message(t('%user does not have a Flickr account', array('%user' => $account->name)), 'error');
-    }
   }
   return $view_access;
 }
 
 function flickr_photos($user = NULL) {
-  drupal_set_title(flickr_photos_page_title($user));
   drupal_add_css(drupal_get_path('module', 'flickr') . '/flickr.css');
 
   global $pager_page_array, $pager_total, $pager_total_items;
@@ -150,7 +145,7 @@ function flickr_photos($user = NULL) {
       $nsid = $account->flickr['nsid'];
     }
     else {
-      // drupal_set_message(t('%user does not have a Flickr account', array('%user' => $account->name)), 'error');
+      drupal_set_message(t('%user does not have a Flickr account', array('%user' => $account->name)), 'error');
       return FALSE;
     }
     $uid = $account->uid;

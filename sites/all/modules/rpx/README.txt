@@ -7,7 +7,7 @@ Authors: Peat Bakke <peat@janrain.com>
 
          Many thanks to Ben Kaplan (BenK) for his great ideas and
          feedback. He is the driving force behind the new features in
-         2.0
+         2.x
 
 Description
 ===========
@@ -212,7 +212,7 @@ DEMO SITE
 ===============
 
 You can test the latest functionality and features at:
-http://plugins.janrain.com/drupal7/
+http://drupal7.janraindemo.com
 
 
 DOCUMENTATION

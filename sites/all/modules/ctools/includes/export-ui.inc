@@ -1,5 +1,4 @@
 <?php
-// $Id: export-ui.inc,v 1.3 2010/12/31 23:50:25 merlinofchaos Exp $
 
 /**
  * @file
@@ -70,6 +69,7 @@ function ctools_export_ui_process(&$plugin, $info) {
     drupal_set_message(t('The plugin definition of @plugin uses %schema, but it has no export section.', array('%schema' => $plugin['schema'], '@plugin' => $plugin['name'])), 'error');
     return;
   }
+  $plugin['export'] += $schema['export'];
 
   $plugin['export'] += array(
     // Add the identifier key from the schema so we don't have to call
@@ -166,6 +166,7 @@ function ctools_export_ui_process(&$plugin, $info) {
       'access callback' => 'ctools_export_ui_task_access',
       'access arguments' => array($plugin['name'], 'edit', $prefix_count + 2),
       'type' => MENU_DEFAULT_LOCAL_TASK,
+      'weight' => -10,
     ),
   );
 
@@ -351,6 +352,7 @@ function ctools_export_ui_process(&$plugin, $info) {
   $plugin['strings']['message'] += array(
     'enable' => t('@plugin %title was enabled.', array('@plugin' => $plugin['title singular proper'])),
     'disable' => t('@plugin %title was disabled.', array('@plugin' => $plugin['title singular proper'])),
+    'no items' => t('There are no @titles to display.', array('@titles' => $plugin['title plural'])),
   );
 }
 

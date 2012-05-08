@@ -1,5 +1,4 @@
 <?php
-// $Id: privatemsg.pages.inc,v 1.1.2.40 2011/01/20 12:57:55 berdir Exp $
 
 /**
  * @file
@@ -99,7 +98,7 @@ function privatemsg_delete($form, $form_state, $thread, $message) {
   }
   return confirm_form($form,
     t('Are you sure you want to delete this message?'),
-    isset($_GET['destination']) ? $_GET['destination'] : 'messages/view/'. $message->thread_id,
+    isset($_GET['destination']) ? $_GET['destination'] : 'messages/view/' . $message->thread_id,
     t('This action cannot be undone.'),
     t('Delete'),
     t('Cancel')
@@ -142,7 +141,7 @@ function privatemsg_list_page($argument = 'list', $uid = NULL) {
   // Because uid is submitted by the menu system, it's a string not a integer.
   if ((int)$uid > 0 && $uid != $user->uid) {
     // Trying to view someone else's messages...
-    if (!$account_check = _privatemsg_user_load($uid)) {
+    if (!$account_check = user_load($uid)) {
       return MENU_NOT_FOUND;
     }
     if (!privatemsg_user_access('read all private messages')) {
@@ -156,7 +155,7 @@ function privatemsg_list_page($argument = 'list', $uid = NULL) {
 }
 
 function privatemsg_list($form, &$form_state, $argument, $account) {
-  drupal_add_css(drupal_get_path('module', 'privatemsg') .'/styles/privatemsg-list.css');
+  drupal_add_css(drupal_get_path('module', 'privatemsg') . '/styles/privatemsg-list.css');
 
   // If this is an AJAX request, update $_GET['q'] so that table sorting and
   // similar links are using the correct base path.
@@ -223,7 +222,7 @@ function privatemsg_list($form, &$form_state, $argument, $account) {
 function privatemsg_list_submit($form, &$form_state) {
   // Load all available operation definitions.
   $operations = module_invoke_all('privatemsg_thread_operations', $form['#list_argument']);
-  drupal_alter('privatemsg_thread_operations', $operations, $for['#list_argument']);
+  drupal_alter('privatemsg_thread_operations', $operations, $form['#list_argument']);
 
   // Default "default" operation, which won't do anything.
   $operation = array('callback' => 0);
@@ -264,7 +263,6 @@ function privatemsg_list_submit($form, &$form_state) {
 function privatemsg_new($form, &$form_state, $recipients = array(), $subject = '', $thread_id = NULL, $read_all = FALSE) {
   global $user;
 
-  $recipients_string = '';
   $recipients_plain = '';
   $body      = '';
 
@@ -328,8 +326,11 @@ function privatemsg_new($form, &$form_state, $recipients = array(), $subject = '
     $to_plain['user_' . $user->uid] = privatemsg_recipient_format($user, array('plain' => TRUE));
   }
 
+  // Subject has / encoded twice if clean urls are enabled to get it through
+  // mod_rewrite and the menu system. Decode it once more.
+  $subject = str_replace('%2F', '/', $subject);
+
   if (!empty($to)) {
-    $recipients_string = implode(', ', $to);
     $recipients_plain = implode(', ', $to_plain);
   }
   if (isset($form_state['values'])) {
@@ -345,7 +346,8 @@ function privatemsg_new($form, &$form_state, $recipients = array(), $subject = '
   }
   if (!$thread_id && !empty($recipients_plain)) {
     drupal_set_title(t('Write new message to @recipient', array('@recipient' => $recipients_plain)));
-  } elseif (!$thread_id) {
+  }
+  elseif (!$thread_id) {
     drupal_set_title(t('Write new message'));
   }
 
@@ -504,6 +506,13 @@ function privatemsg_new($form, &$form_state, $recipients = array(), $subject = '
   if (isset($form_state['validate_built_message'])) {
     $message = $form_state['validate_built_message'];
   }
+
+  // If a module (e.g. OG) adds a validate or submit callback to the form in
+  // field_attach_form, the form system will not add ours automatically
+  // anymore. Therefore, explicitly adding them here.
+  $form['#submit'] = array('privatemsg_new_submit');
+  $form['#validate'] = array('privatemsg_new_validate');
+
   field_attach_form('privatemsg_message', $message, $form, $form_state);
   return $form;
 }
@@ -525,11 +534,13 @@ function privatemsg_new_validate($form, &$form_state) {
   $message->mid       = 0;
   $message->format    = $message->body['format'];
   $message->body      = $message->body['value'];
-  $message->timestamp = time();
+  $message->timestamp = REQUEST_TIME;
+  // Avoid subjects which only consist of a space as these can not be clicked.
+  $message->subject = trim($message->subject);
 
-  $trimed_body = trim(truncate_utf8(strip_tags($message->body), 50, TRUE, TRUE));
-  if (empty($message->subject) && !empty($trimed_body)) {
-    $message->subject = $trimed_body;
+  $trimmed_body = trim(truncate_utf8(strip_tags($message->body), 50, TRUE, TRUE));
+  if (empty($message->subject) && !empty($trimmed_body)) {
+    $message->subject = $trimmed_body;
   }
   // Only parse the user string for a new thread.
   if (!isset($message->thread_id)) {
@@ -655,7 +666,7 @@ function privatemsg_undo_action() {
     if (isset($undo['function']) && isset($undo['args'])) {
       // Load the user object.
       if (isset($undo['args']['account']) && $undo['args']['account'] > 0) {
-        $undo['args']['account'] = _privatemsg_user_load((int)$undo['args']['account']);
+        $undo['args']['account'] = user_load((int)$undo['args']['account']);
       }
       call_user_func_array($undo['function'], $undo['args']);
     }
@@ -674,7 +685,7 @@ function privatemsg_autocomplete($string) {
   $names = array();
   // 1: Parse $string and build list of valid user names.
   $fragments = explode(',', $string);
-  foreach ($fragments as $index => $name) {
+  foreach ($fragments as $name) {
     if ($name = trim($name)) {
       $names[$name] = $name;
     }
@@ -711,7 +722,7 @@ function privatemsg_autocomplete($string) {
   // Check if there are any duplicates.
   if (count(array_unique($themed_matches)) != count($themed_matches)) {
     // Loop over matches, look for duplicates of each one.
-    foreach ($themed_matches as $key => $themed_match) {
+    foreach ($themed_matches as $themed_match) {
       $duplicate_keys = array_keys($themed_matches, $themed_match);
       if (count($duplicate_keys) > 1) {
         // There are duplicates, make them unique.
@@ -725,7 +736,7 @@ function privatemsg_autocomplete($string) {
 
   // Prefix the matches and convert them to the correct form for the
   // autocomplete.
-  $prefix = count($names) ? implode(", ", $names) .", " : '';
+  $prefix = count($names) ? implode(", ", $names) . ", " : '';
   $suggestions = array();
   foreach ($themed_matches as $match) {
     $suggestions[$prefix . $match . ', '] = $match;
@@ -744,7 +755,8 @@ function privatemsg_autocomplete($string) {
  *   privatemsg_thread_load().
  * @return
  *   The page content.
- * @see privatemsg_thread_load().
+ *
+ * @see privatemsg_thread_load()
  */
 function  privatemsg_view($thread) {
   drupal_set_title($thread['subject']);
@@ -761,7 +773,7 @@ function  privatemsg_view($thread) {
         'query' => array('start' => $thread['older_start']),
         'title' => t('Display older messages'),
       );
-       $older = l(t('<<'), 'messages/view/' . $thread['thread_id'], $options);
+      $older = l(t('<<'), 'messages/view/' . $thread['thread_id'], $options);
     }
     $newer = '';
     if (isset($thread['newer_start'])) {
@@ -795,7 +807,7 @@ function  privatemsg_view($thread) {
     // Set message as read and theme it.
     // Add CSS classes.
     $message->classes = array('privatemsg-message', 'privatemsg-message-' . $i, $i % 2 == 1 ? 'privatemsg-message-even' : 'privatemsg-message-odd');
-     if (!empty($message->is_new)) {
+    if (!empty($message->is_new)) {
       // Mark message as read.
       privatemsg_message_change_status($pmid, PRIVATEMSG_READ, $thread['user']);
       $message->classes[] = 'privatemsg-message-new';

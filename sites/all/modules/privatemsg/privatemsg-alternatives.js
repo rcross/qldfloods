@@ -1,4 +1,3 @@
-// $Id: privatemsg-alternatives.js,v 1.1.2.1 2010/10/06 19:41:08 berdir Exp $
 
 (function ($) {
   Drupal.behaviors.PrivatemsgAlternatives = {

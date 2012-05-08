@@ -1,7 +1,6 @@
 <?php
-// $Id: views_handler_filter_string.test,v 1.1.2.1 2010/12/27 22:06:04 dereine Exp $
 
-class viewsHandlerFilterStringTest extends ViewsSqlTest {
+class ViewsHandlerFilterStringTest extends ViewsSqlTest {
   var $column_map = array();
 
   public static function getInfo() {
@@ -41,7 +40,7 @@ class viewsHandlerFilterStringTest extends ViewsSqlTest {
   }
 
   /**
-   * A extended test dataset.
+   * An extended test dataset.
    */
   protected function dataSet() {
     $dataset = parent::dataSet();
@@ -147,7 +146,6 @@ class viewsHandlerFilterStringTest extends ViewsSqlTest {
   }
 
   function testFilterStringWord() {
-    return;
     $view = $this->getBasicView();
 
     // Change the filtering
@@ -158,12 +156,15 @@ class viewsHandlerFilterStringTest extends ViewsSqlTest {
         'field' => 'description',
         'relationship' => 'none',
         'operator' => 'word',
-        'value' => 'musician producer',
+        'value' => 'actor',
       ),
     ));
 
     $this->executeView($view);
     $resultset = array(
+      array(
+        'name' => 'George',
+      ),
       array(
         'name' => 'Ringo',
       ),
@@ -193,6 +194,7 @@ class viewsHandlerFilterStringTest extends ViewsSqlTest {
     );
     $this->assertIdenticalResultset($view, $resultset, $this->column_map);
   }
+
   function testFilterStringStarts() {
     $view = $this->getBasicView();
 
@@ -216,6 +218,7 @@ class viewsHandlerFilterStringTest extends ViewsSqlTest {
     );
     $this->assertIdenticalResultset($view, $resultset, $this->column_map);
   }
+
   function testFilterStringNotStarts() {
     $view = $this->getBasicView();
 

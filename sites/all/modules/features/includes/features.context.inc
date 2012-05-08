@@ -1,8 +1,7 @@
 <?php
-// $Id: features.context.inc,v 1.1.2.12.2.4 2010/09/14 21:36:26 yhahn Exp $
 
 /**
- * Implementation of hook_features_export().
+ * Implements hook_features_export().
  */
 function context_features_export($data, &$export, $module_name = '') {
   $pipe = ctools_component_features_export('context', $data, $export, $module_name);
@@ -43,7 +42,7 @@ function context_features_export($data, &$export, $module_name = '') {
 }
 
 /**
- * Implementation of hook_features_revert().
+ * Implements hook_features_revert().
  *
  * @param $module
  * name of module to revert content for

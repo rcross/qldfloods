@@ -1,5 +1,4 @@
 <?php
-// $Id: views_plugin_query.inc,v 1.1.4.13 2011/01/04 01:11:34 merlinofchaos Exp $
 /**
  * @file views_plugin_query.inc
  * Defines the base query class, which is the underlying layer in a View.
@@ -34,11 +33,17 @@ class views_plugin_query extends views_plugin {
 
   /**
    * Let modules modify the query just prior to finalizing it.
+   *
+   * @param view $view
+   *   The view which is executed.
    */
   function alter(&$view) {  }
 
   /**
    * Builds the necessary info to execute the query.
+   *
+   * @param view $view
+   *   The view which is executed.
    */
   function build(&$view) { }
 
@@ -48,6 +53,11 @@ class views_plugin_query extends views_plugin {
    *
    * Values to set: $view->result, $view->total_rows, $view->execute_time,
    * $view->pager['current_page'].
+   *
+   * $view->result should contain an array of objects.
+   *
+   * @param view $view
+   *   The view which is executed.
    */
   function execute(&$view) {  }
 
@@ -56,6 +66,9 @@ class views_plugin_query extends views_plugin {
    *
    * This signature is something that can be used when perusing query logs to
    * discern where particular queries might be coming from.
+   *
+   * @param view $view
+   *   The view which is executed.
    */
   function add_signature(&$view) { }
 
@@ -69,7 +82,9 @@ class views_plugin_query extends views_plugin {
   /**
    * Add settings for the ui.
    */
-  function options_form(&$form, &$form_state) { }
+  function options_form(&$form, &$form_state) {
+    parent::options_form($form, $form_state);
+  }
 
   function options_validate(&$form, &$form_state) { }
 
@@ -96,11 +111,11 @@ class views_plugin_query extends views_plugin {
   /**
    * Render the pager, if necessary.
    */
-  function render_pager() {
+  function render_pager($exposed_input) {
     if (!empty($this->pager) && $this->pager->use_pager()) {
-      $exposed_input = isset($this->view->exposed_data_raw) ? $this->view->exposed_data_raw : NULL;
       return $this->pager->render($exposed_input);
     }
+
     return '';
   }
 
@@ -145,4 +160,10 @@ class views_plugin_query extends views_plugin {
     $this->group_operator = strtoupper($type);
   }
 
+  /**
+   * Returns the according entity objects for the given query results.
+   */
+  function get_result_entities($results, $relationship = NULL) {
+    return FALSE;
+  }
 }

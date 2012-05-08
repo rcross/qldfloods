@@ -4,6 +4,7 @@
   height: 16px;
   margin: 1px;
   float: left;
+  clear: none !important;
   background-image: url(images/providers_icons16.png);
 }
 
@@ -13,6 +14,7 @@
   height: 30px;
   margin: 1px;
   float: left;
+  clear: none !important;
   background-image: url(images/providers_icons32.png);
 }
 
@@ -28,35 +30,35 @@
 }
 
 /* We don't want bullets in the admin/config/people/rpx provider list */
-.item-list ul li {
-  list-style-type: none !important;
+#rpx-admin-settings * .item-list ul li {
+  list-style-type: none;
 }
 
 .rpx-facebook-small {
   background-position: 0px 0px;
 }
 
-.rpx-twitter-small {
+.rpx-google-small {
   background-position: 0px -16px;
 }
 
-.rpx-myspace-small {
+.rpx-linkedin-small {
   background-position: 0px -32px;
 }
 
-.rpx-live_id-small {
+.rpx-myspace-small {
   background-position: 0px -48px;
 }
 
-.rpx-yahoo-small {
+.rpx-twitter-small {
   background-position: 0px -64px;
 }
 
-.rpx-google-small {
+.rpx-live_id-small {
   background-position: 0px -80px;
 }
 
-.rpx-openid-small {
+.rpx-yahoo-small {
   background-position: 0px -96px;
 }
 
@@ -64,39 +66,39 @@
   background-position: 0px -112px;
 }
 
-.rpx-livejournal-small {
+.rpx-blogger-small {
   background-position: 0px -128px;
 }
 
-.rpx-myopenid-small {
+.rpx-flickr-small {
   background-position: 0px -144px;
 }
 
-.rpx-netlog-small {
+.rpx-hyves-small {
   background-position: 0px -160px;
 }
 
-.rpx-flickr-small {
+.rpx-livejournal-small {
   background-position: 0px -176px;
 }
 
-.rpx-blogger-small {
+.rpx-myopenid-small {
   background-position: 0px -192px;
 }
 
-.rpx-verisign-small {
+.rpx-netlog-small {
   background-position: 0px -208px;
 }
 
-.rpx-wordpress-small {
+.rpx-openid-small {
   background-position: 0px -224px;
 }
 
-.rpx-hyves-small {
+.rpx-verisign-small {
   background-position: 0px -240px;
 }
 
-.rpx-linkedin-small {
+.rpx-wordpress-small {
   background-position: 0px -256px;
 }
 
@@ -104,8 +106,24 @@
   background-position:0px -272px;
 }
 
-.rpx-other-small {
+.rpx-orkut-small {
   background-position:0px -288px;
+}
+
+.rpx-vzn-small {
+  background-position:0px -304px;
+}
+
+.rpx-salesforce-small {
+  background-position:0px -320px;
+}
+
+.rpx-foursquare-small {
+  background-position:0px -336px;
+}
+
+.rpx-other-small {
+  background-position:0px -352px;
 }
 
 .rpx-facebook-medium {
@@ -113,75 +131,91 @@
 }
 
 .rpx-google-medium {
-  background-position: 0px -32px;
+  background-position: 0px -30px;
 }
 
 .rpx-linkedin-medium {
-  background-position: 0px -64px;
+  background-position: 0px -60px;
 }
 
 .rpx-myspace-medium {
-  background-position: 0px -96px;
+  background-position: 0px -90px;
 }
 
 .rpx-twitter-medium {
-  background-position: 0px -128px;
+  background-position: 0px -120px;
 }
 
 .rpx-live_id-medium {
-  background-position: 0px -160px;
+  background-position: 0px -150px;
 }
 
 .rpx-yahoo-medium {
-  background-position: 0px -192px;
+  background-position: 0px -180px;
 }
 
 .rpx-aol-medium {
-  background-position: 0px -224px;
+  background-position: 0px -210px;
 }
 
 .rpx-blogger-medium {
-  background-position: 0px -256px;
+  background-position: 0px -240px;
 }
 
 .rpx-flickr-medium {
-  background-position: 0px -288px;
+  background-position: 0px -270px;
 }
 
 .rpx-hyves-medium {
-  background-position: 0px -320px;
+  background-position: 0px -300px;
 }
 
 .rpx-livejournal-medium {
-  background-position: 0px -352px;
+  background-position: 0px -330px;
 }
 
 .rpx-myopenid-medium {
-  background-position: 0px -384px;
+  background-position: 0px -360px;
 }
 
 .rpx-netlog-medium {
-  background-position: 0px -416px;
+  background-position: 0px -390px;
 }
 
 .rpx-openid-medium {
-  background-position: 0px -448px;
+  background-position: 0px -420px;
 }
 
 .rpx-verisign-medium {
-  background-position: 0px -480px;
+  background-position: 0px -450px;
 }
 
 .rpx-wordpress-medium {
-  background-position: 0px -512px;
+  background-position: 0px -480px;
 }
 
 .rpx-paypal-medium {
-  background-position: 0px -544px;
+  background-position:0px -510px;
+}
+
+.rpx-orkut-medium {
+  background-position:0px -540px;
+}
+
+.rpx-vzn-medium {
+  background-position:0px -570px;
+}
+
+.rpx-salesforce-medium {
+  background-position:0px -600px;
+}
+
+.rpx-foursquare-medium {
+  background-position:0px -630px;
 }
 
 .rpx-other-medium {
-  background-position: 0px -576px;
+  background-position:0px -660px;
 }
 
 #user-login-form .rpx-links,

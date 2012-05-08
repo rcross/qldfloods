@@ -1,15 +1,14 @@
 <?php
-// $Id: features.block.inc,v 1.1.2.3 2009/05/31 02:44:04 yhahn Exp $
 
 /**
- * Implementation of hook_features_api().
+ * Implements hook_features_api().
  */
 function block_features_api() {
   return array();
 }
 
 /**
- * Implementation of hook_features_export().
+ * Implements hook_features_export().
  */
 function block_features_export($data, &$export) {
   $pipe = array();

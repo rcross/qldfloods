@@ -1,4 +1,3 @@
-// $Id: jump-menu.js,v 1.3 2010/10/11 22:18:22 sdboyer Exp $
 
 (function($) {
   Drupal.behaviors.CToolsJumpMenu = { 
@@ -11,7 +10,11 @@
         .addClass('ctools-jump-menu-processed')
         .change(function() {
           var loc = $(this).val();
-          if (loc) {
+          var urlArray = loc.split('::');
+          if (urlArray[1]) {
+            location.href = urlArray[1];
+          }
+          else {
             location.href = loc;
           }
           return false;
@@ -25,7 +28,11 @@
           // Find our sibling value.
           var $select = $(this).parents('form').find('.ctools-jump-menu-select');
           var loc = $select.val();
-          if (loc) {
+          var urlArray = loc.split('::');
+          if (urlArray[1]) {
+            location.href = urlArray[1];
+          }
+          else {
             location.href = loc;
           }
           return false;

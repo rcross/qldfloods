@@ -1,5 +1,4 @@
 <?php
-// $Id: privatemsg_limits.module,v 1.1.2.2 2010/12/24 15:03:25 berdir Exp $
 
 /**
  * @file
@@ -68,8 +67,6 @@ function privatemsg_limits_privatemsg_message_validate($message, $form = FALSE) 
   if (variable_get('privatemsg_limits_receive_enabled', FALSE) && (empty($message->thread_id) || variable_get('privatemsg_limits_receive_object', 'message') == 'message')) {
     $amount = _privatemsg_limits_get_amount('receive_amount', $message->author);
     $used = _privatemsg_limits_get_received($message->author);
-
-    $type = array('message' => t('messages'), 'thread' => t('conversations'));
 
     if ($amount > 0 && $used >= $amount) {
       if (variable_get('privatemsg_limits_receive_object', 'message') == 'message') {
@@ -220,17 +217,20 @@ function _privatemsg_limits_get_oldest($account, $timeframe) {
     ->execute()
     ->fetchField();
 
-  $wait_time = ($timestamp - (time() - $timeframe));
+  $wait_time = ($timestamp - (REQUEST_TIME - $timeframe));
   return format_interval($wait_time, 6);
 }
 
 /**
- * Loads the maximum value of a treshold value, takes roles into account.
+ * Loads the maximum value of a threshold value, takes roles into account.
  *
- * @param string $name    Unique part of the name
- * @param user   $account User object
+ * @param $name
+ *   Unique part of the name.
+ * @param $account
+ *   User object to get the limit for.
  *
- * @return int A specific number or 0 for unlimited
+ * @return
+ *   A specific number or 0 for unlimited.
  */
 function _privatemsg_limits_get_amount($name, $account) {
   // Don't limit uid 1.
@@ -248,7 +248,7 @@ function _privatemsg_limits_get_amount($name, $account) {
 
   $role_max = 0;
   foreach ($account->roles as $id => $role) {
-    $new_max = variable_get("privatemsg_limits_{$name}_role_". $id, NULL);
+    $new_max = variable_get("privatemsg_limits_{$name}_role_" . $id, NULL);
     if ($new_max == 'unlimited') {
       return 0;
     }
@@ -257,7 +257,7 @@ function _privatemsg_limits_get_amount($name, $account) {
     }
   }
   if ($role_max == 0) {
-    return variable_get('privatemsg_limits_'. $name, 0);
+    return variable_get('privatemsg_limits_' . $name, 0);
   }
   return $role_max;
 }
@@ -300,7 +300,7 @@ function privatemsg_limits_sql_sent($account,  $timeframe) {
 
   return $query
     ->condition('pm.author', $account->uid)
-    ->condition('pm.timestamp', time() - $timeframe, '>')
+    ->condition('pm.timestamp', REQUEST_TIME - $timeframe, '>')
     ->orderBy('timestamp', 'ASC');
 }
 

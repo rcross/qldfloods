@@ -1,7 +1,7 @@
 /*!
- * jQuery UI @VERSION
+ * jQuery UI 1.8.11
  *
- * Copyright 2010, AUTHORS.txt (http://jqueryui.com/about)
+ * Copyright 2011, AUTHORS.txt (http://jqueryui.com/about)
  * Dual licensed under the MIT or GPL Version 2 licenses.
  * http://jquery.org/license
  *
@@ -18,7 +18,7 @@ if ( $.ui.version ) {
 }
 
 $.extend( $.ui, {
-	version: "@VERSION",
+	version: "1.8.11",
 
 	keyCode: {
 		ALT: 18,
@@ -263,7 +263,12 @@ $.extend( $.ui, {
 		}
 	},
 	
-	contains: $.contains,
+	// will be deprecated when we switch to jQuery 1.4 - use jQuery.contains()
+	contains: function( a, b ) {
+		return document.compareDocumentPosition ?
+			a.compareDocumentPosition( b ) & 16 :
+			a !== b && a.contains( b );
+	},
 	
 	// only used by resizable
 	hasScroll: function( el, a ) {

@@ -1,5 +1,4 @@
 <?php
-// $Id: privatemsg.test,v 1.2.2.1.2.42 2011/01/05 09:54:46 berdir Exp $
 /**
  * @file
  * Test file for privatemsg.module
@@ -8,7 +7,7 @@
 
 class PrivatemsgTestCase extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   public static function getInfo() {
     return array
@@ -26,7 +25,7 @@ class PrivatemsgTestCase extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('privatemsg');
@@ -251,6 +250,12 @@ class PrivatemsgTestCase extends DrupalWebTestCase {
       'subject'     => '',
       'body[value]' => '',
     );
+    // Empty subject and body.
+    $editonlyspace = array(
+      'recipient'   => $recipient2->name,
+      'subject'     => ' ',
+      'body[value]' => $this->randomName(10),
+    );
     // Invalid and valid recipient
     $editmixed = array(
       'recipient'   => ($invalidmixed = $this->randomName(5)) . ', ' . $recipient->name,
@@ -289,6 +294,9 @@ class PrivatemsgTestCase extends DrupalWebTestCase {
     $this->drupalPost('messages/new', $editempty, t('Send message'));
     $this->assertText(t('You must include a subject line with your message.'), 'Empty subject message displayed.');
 
+    $this->drupalPost('messages/new', $editonlyspace, t('Send message'));
+    $this->assertText(t('A message has been sent to @recipients.', array('@recipients' => $recipient2->name)), 'Message sent confirmation displayed.');
+
     $this->drupalPost('messages/new', $editmixed, t('Send message'));
     $this->assertText(t('A message has been sent to @recipients.', array('@recipients' => $recipient->name)), 'Message sent confirmation displayed.');
     $this->assertText(t('The following users will not receive this private message: @recipients', array('@recipients' => $invalidmixed)), 'Message about non-existing user displayed.');
@@ -298,6 +306,11 @@ class PrivatemsgTestCase extends DrupalWebTestCase {
 
     // Login as recipient2 and try to write some replies.
     $this->drupalLogin($recipient2);
+    $this->drupalGet('messages');
+
+    // Check that the message with only a space in the subject uses the body
+    // as subject.
+    $this->clickLink($editonlyspace['body[value]']);
     $this->drupalGet('messages');
 
     $this->assertNoText($edit['subject'], 'Message sent to other recipient not found.');
@@ -381,16 +394,16 @@ class PrivatemsgTestCase extends DrupalWebTestCase {
 
     $this->drupalLogin($disableduser);
     // Now disable $disabledUser.
-    $this->drupalGet('user/'. $disableduser->uid .'/edit');
+    $this->drupalGet('user/' . $disableduser->uid . '/edit');
     $edit['pm_enable'] = FALSE;
-    $this->drupalPost('user/'. $disableduser->uid .'/edit', $edit, t('Save'));
+    $this->drupalPost('user/' . $disableduser->uid . '/edit', $edit, t('Save'));
 
     // Verify that disableduser can list messages.
     $this->drupalGet('messages');
     $this->assertResponse(200, t('HTTP Response 200: Access to reading messages page is allowed.'));
 
     // Verify that $disableduser can read messages but there is not reply form
-    $this->drupalGet('messages/view/'. $return['message']->thread_id);
+    $this->drupalGet('messages/view/' . $return['message']->thread_id);
     $this->assertResponse(200, t('HTTP Response 200: Access to message thread page is allowed.'));
     $this->assertNoText(t('Reply to thread'), 'No reply form shown.');
 
@@ -421,7 +434,7 @@ class PrivatemsgTestCase extends DrupalWebTestCase {
     // Make sure that a message to multiple recipients still works if one is
     // disabled.
     $messagemultiple = array(
-      'recipient'   => $enableduser2->name .', '. $disableduser->name,
+      'recipient'   => $enableduser2->name . ', ' . $disableduser->name,
       'subject'     => $this->randomName(20),
       'body[value]'        => $this->randomName(100),
     );
@@ -513,14 +526,13 @@ class PrivatemsgTestCase extends DrupalWebTestCase {
   /**
    * Tests for the flush feature
    */
-  function testPrivatemsgFlush()
-  {
+  function testPrivatemsgFlush() {
     $author = $this->drupalCreateUser(array('write privatemsg', 'read privatemsg'));
     $recipient = $this->drupalCreateUser(array('write privatemsg', 'read privatemsg'));
 
     // Send 10 messages.
     for ($i = 0; $i < 10; $i++) {
-      privatemsg_new_thread(array($recipient), 'Message #'. $i, 'This is the body', array('author' => $author));
+      privatemsg_new_thread(array($recipient), 'Message #' . $i, 'This is the body', array('author' => $author));
     }
 
     // Delete message 1, 3, 4, 6, 9 for author.
@@ -540,12 +552,12 @@ class PrivatemsgTestCase extends DrupalWebTestCase {
 
     // Set back the deleted timestamp 35 days back of mid 4.
     db_update('pm_index')
-      ->fields(array('deleted' => time() - 35 * 86400))
+      ->fields(array('deleted' => REQUEST_TIME - 35 * 86400))
       ->condition('mid', 4)
       ->execute();
     // Set back the deleted timestamp of mid 6, but only 20 days back.
     db_update('pm_index')
-      ->fields(array('deleted' => time() - 20 * 86400))
+      ->fields(array('deleted' => REQUEST_TIME - 20 * 86400))
       ->condition('mid', 6)
       ->execute();
 
@@ -634,7 +646,7 @@ class PrivatemsgTestCase extends DrupalWebTestCase {
     $this->drupalLogin($recipient2);
     $this->drupalGet('messages/view/' . $return['message']->thread_id);
     $this->assertText($body1, 'First message is still displayed');
-    $this->assertText($body2,'First message is still displayed');
+    $this->assertText($body2, 'First message is still displayed');
 
     // Test delete all checkbox.
     $this->drupalLogin($admin);
@@ -664,6 +676,7 @@ class PrivatemsgTestCase extends DrupalWebTestCase {
     $this->drupalPost(NULL, NULL, t('Cancel account'));
 
     // Confirm account cancellation.
+    // Explicitly use time(), REQUEST_TIME is not exact enough.
     $timestamp = time();
     $this->drupalPost(NULL, NULL, t('Cancel account'));
 
@@ -699,6 +712,7 @@ class PrivatemsgTestCase extends DrupalWebTestCase {
     $this->drupalPost(NULL, NULL, t('Cancel account'));
 
     // Confirm account cancellation.
+    // Explicitly use time(), REQUEST_TIME is not exact enough.
     $timestamp = time();
     $this->drupalPost(NULL, NULL, t('Cancel account'));
 
@@ -706,7 +720,7 @@ class PrivatemsgTestCase extends DrupalWebTestCase {
     $this->drupalGet("user/$dummy->uid/cancel/confirm/$timestamp/" . user_pass_rehash($dummy->pass, $timestamp, $dummy->login));
   }
 
- function checkThreadDelete($message) {
+  function checkThreadDelete($message) {
     $this->assertText($message->subject, t('Message is displayed.'));
 
     $delete = array(
@@ -740,9 +754,20 @@ class PrivatemsgTestCase extends DrupalWebTestCase {
       'body[value]' => $this->randomName(50),
     );
     $this->drupalLogin($user);
+
+    // Preview message.
     $this->drupalPost('messages/new', $message, t('Preview message'));
     $this->assertTitle(t('Write new message to @user', array('@user' => $user->name)) . ' | Drupal', t('Correct title is displayed.'));
     $this->assertFieldByXPath($this->buildXPathQuery('//div[@class=:class]/p', array(':class' => 'privatemsg-message-body')), $message['body[value]'], t('Message body is previewed'));
+    $this->assertFieldByName('body[value]', $message['body[value]'], t('Message body field has the correct default value.'));
+
+    // Send message.
+    $this->drupalPost(NULL, array(), t('Send message'));
+    $this->assertText($message['subject'], t('Message subject is displayed.'));
+    $this->assertText($message['body[value]'], t('Message body is displayed.'));
+
+    $this->assertText(t('A message has been sent to @recipient.', array('@recipient' => $user->name)), t('Sent confirmation displayed.'));
+
   }
 
   /**
@@ -797,7 +822,7 @@ class PrivatemsgTestCase extends DrupalWebTestCase {
  */
 class PrivatemsgFieldsTestCase extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   public static function getInfo() {
     return array
@@ -809,7 +834,7 @@ class PrivatemsgFieldsTestCase extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('privatemsg');
@@ -1178,7 +1203,7 @@ class PrivatemsgTokenTestCase extends DrupalWebTestCase {
  */
 class PrivatemsgAPITestCase extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   public static function getInfo() {
     return array(
@@ -1195,7 +1220,7 @@ class PrivatemsgAPITestCase extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('privatemsg');
@@ -1282,5 +1307,62 @@ class PrivatemsgAPITestCase extends DrupalWebTestCase {
     $errormessage = t('@user is not allowed to write messages.', array('@user' => $recipient3->name));
     $this->assertEqual($errormessage, $resultf2['messages']['error'][0], 'API denied to send message from user without permission');
 
+  }
+
+  /**
+   * Test various use cases for privatemsg_get_link().
+   */
+  function testGetLink() {
+    $author      = $this->drupalCreateUser(array('write privatemsg', 'read privatemsg'));
+    $recipient1  = $this->drupalCreateUser(array('read privatemsg'));
+    $recipient2  = $this->drupalCreateUser(array('read privatemsg'));
+    $recipient3  = $this->drupalCreateUser(array('read privatemsg', 'allow disabling privatemsg'));
+    $recipient4  = $this->drupalCreateUser();
+
+    $this->drupalLogin($author);
+
+    $this->drupalGet(privatemsg_get_link(array($recipient1)));
+    $this->assertFieldByName('recipient', $recipient1->name . ' [user]');
+
+    $this->drupalGet(privatemsg_get_link(array($recipient1, $recipient2)));
+    $this->assertFieldByName('recipient', $recipient1->name . ' [user], ' . $recipient2->name . ' [user]');
+
+    $this->drupalGet(privatemsg_get_link(array($recipient1, $recipient2), $author));
+    $this->assertFieldByName('recipient', $recipient1->name . ' [user], ' . $recipient2->name . ' [user]');
+
+    $this->drupalGet(privatemsg_get_link(array($recipient1, $recipient2), $author, $subject = 'Str/"ang\\w3//'));
+    $this->assertFieldByName('recipient', $recipient1->name . ' [user], ' . $recipient2->name . ' [user]');
+    $this->assertFieldByName('subject', $subject);
+
+    // Disable privatemsg for recipient 3.
+    db_insert('pm_disable')
+      ->fields(array(
+        'uid' => $recipient3->uid,
+      ))
+      ->execute();
+    $this->assertFalse(privatemsg_get_link(array($recipient3), $author));
+
+    $this->drupalGet(privatemsg_get_link(array($recipient1, $recipient3), $author));
+    $this->assertFieldByName('recipient', $recipient1->name . ' [user]');
+
+    // Disable links to self, verify that a link is only returned when the
+    // author is not the only recipient.
+    variable_set('privatemsg_display_link_self', FALSE);
+
+    $this->assertFalse(privatemsg_get_link(array($author), $author));
+
+    $this->drupalGet(privatemsg_get_link(array($recipient1, $author), $author));
+    $this->assertFieldByName('recipient', $recipient1->name . ' [user]');
+
+    // Verify that link is not shown when recipient doesn't have read
+    // permission.
+    $this->assertFalse(privatemsg_get_link(array($recipient4), $author));
+
+    $this->drupalGet(privatemsg_get_link(array($recipient1, $recipient4), $author));
+    $this->assertFieldByName('recipient', $recipient1->name . ' [user]');
+
+    // Verify that link is not shown when author does not have write permission.
+    $this->drupalLogin($recipient1);
+    $this->assertFalse(privatemsg_get_link(array($author), $recipient1));
   }
 }

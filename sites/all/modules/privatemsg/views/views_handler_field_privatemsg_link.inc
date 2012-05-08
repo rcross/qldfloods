@@ -1,5 +1,4 @@
 <?php
-// $Id: views_handler_field_privatemsg_link.inc,v 1.1.4.6 2011/01/20 12:47:31 berdir Exp $
 
 /**
  * @file
@@ -85,7 +84,7 @@ class views_handler_field_privatemsg_link extends views_handler_field {
       }
     }
     $count = 0; // This lets us prepare the key as we want it printed.
-    foreach ($this->view->display_handler->get_handlers('argument') as $arg => $handler) {
+    foreach ($this->view->display_handler->get_handlers('argument') as $handler) {
       $options[t('Arguments')]['%' . ++$count] = t('@argument title', array('@argument' => $handler->ui_name()));
       $options[t('Arguments')]['!' . $count] = t('@argument input', array('@argument' => $handler->ui_name()));
     }
@@ -158,7 +157,7 @@ class views_handler_field_privatemsg_link extends views_handler_field {
     }
 
     $data = '';
-    if (($recipient = _privatemsg_user_load($uid)) && ($url = privatemsg_get_link(array($recipient), NULL, $subject))) {
+    if (($recipient = user_load($uid)) && ($url = privatemsg_get_link(array($recipient), NULL, $subject))) {
       $data = l($text, $url, $options);
     }
     return $data;

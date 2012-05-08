@@ -1,5 +1,4 @@
 <?php
-// $Id: page_primary_links.inc,v 1.3 2010/12/31 21:21:39 merlinofchaos Exp $
 
 /**
  * @file
@@ -30,4 +29,12 @@ function ctools_page_primary_links_content_type_render($subtype, $conf, $panel_a
   $block->content = theme('links', array('links' => menu_main_menu(), 'attributes' => array('class' => 'links primary-links')));
 
   return $block;
+}
+
+/**
+ * Returns an edit form for custom type settings.
+ */
+function ctools_page_primary_links_content_type_edit_form($form, &$form_state) {
+  // Empty so that we can have title override.
+  return $form;
 }

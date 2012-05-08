@@ -1,8 +1,9 @@
 <?php
-// $Id: views_handler_filter_profile_selection.inc,v 1.1.6.1 2010/12/20 20:14:28 dereine Exp $
 
 /**
  * Filter by a selection widget in the profile.
+ *
+ * @ingroup views_filter_handlers
  */
 class views_handler_filter_profile_selection extends views_handler_filter_in_operator {
   function get_value_options() {

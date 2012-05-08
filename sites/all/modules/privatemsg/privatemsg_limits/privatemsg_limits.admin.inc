@@ -1,5 +1,4 @@
 <?php
-// $Id: privatemsg_limits.admin.inc,v 1.1.2.2 2010/12/24 15:03:25 berdir Exp $
 
 /**
  * @file
@@ -60,7 +59,7 @@ function privatemsg_limits_admin($form, &$form_state) {
     '#default_value' => variable_get('privatemsg_limits_receive_amount', 0),
     '#size' => '10',
   );
-  $form['receive'] += _privatemsg_qota_role_override_form('receive_amount', $default);
+  $form['receive'] += _privatemsg_limits_role_override_form('receive_amount', $default);
 
   $form['send'] = array(
     '#type' => 'fieldset',
@@ -92,7 +91,7 @@ function privatemsg_limits_admin($form, &$form_state) {
     '#default_value' => variable_get('privatemsg_limits_send_timeframe', 3600),
     '#options' => drupal_map_assoc(array(60, 300, 1800, 3600, 86400, 604800, 604800 * 4), 'format_interval'),
   );
-  $form['send'] += _privatemsg_qota_role_override_form('send_amount', $default);
+  $form['send'] += _privatemsg_limits_role_override_form('send_amount', $default);
 
   $form['recipients'] = array(
     '#type' => 'fieldset',
@@ -110,7 +109,7 @@ function privatemsg_limits_admin($form, &$form_state) {
     '#default_value' => variable_get('privatemsg_limits_recipients_amount', 0),
     '#size' => '10',
   );
-  $form['recipients'] += _privatemsg_qota_role_override_form('recipients_amount', $default);
+  $form['recipients'] += _privatemsg_limits_role_override_form('recipients_amount', $default);
 
   return system_settings_form($form);
 }
@@ -119,11 +118,11 @@ function privatemsg_limits_admin($form, &$form_state) {
  * Provides a generic rules form to override the default values.
  *
  * @param string $name    Unique name for the value
- * @param array  $default defaut form configuration
+ * @param array  $default default form configuration
  *
  * @return array Form fieldset
  */
-function _privatemsg_qota_role_override_form($name, $default) {
+function _privatemsg_limits_role_override_form($name, $default) {
   $form['roles'] = array(
     '#type'   => 'fieldset',
     '#description' => t('You may override the maximum limit specified above on a per-role basis. If a user has multiple roles, then the highest maximum value shall be used. Enter "unlimited" if a role may have unlimited messages/conversations. Enter "0" if you do not want to override the maximum limit setting.'),
@@ -135,7 +134,7 @@ function _privatemsg_qota_role_override_form($name, $default) {
   foreach (user_roles(TRUE) as $id => $role) {
     $form['roles']["privatemsg_limits_{$name}_role_{$id}"] = $default + array(
       '#title' => $role,
-      '#default_value' => variable_get("privatemsg_limits_{$name}_role_". $id, 0),
+      '#default_value' => variable_get("privatemsg_limits_{$name}_role_" . $id, 0),
     );
   }
   return $form;

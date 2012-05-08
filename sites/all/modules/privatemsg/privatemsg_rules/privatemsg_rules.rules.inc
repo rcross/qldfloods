@@ -1,5 +1,4 @@
 <?php
-// $Id: privatemsg_rules.rules.inc,v 1.6.2.3 2011/01/11 17:29:38 berdir Exp $
 
 /**
  * @file

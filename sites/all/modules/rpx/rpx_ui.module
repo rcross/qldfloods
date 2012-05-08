@@ -49,13 +49,6 @@ function rpx_ui_menu() {
     'weight' => -8,
     'file' => 'rpx_ui.admin.inc',
   );
-  $items['admin/config/people/rpx/mapping/create'] = array(
-    'title' => 'Create new mapping',
-    'page callback' => 'rpx_profile_mapping_create',
-    'access arguments' => array('administer janrain engage'),
-    'type' => MENU_LOCAL_ACTION,
-    'file' => 'rpx_ui.admin.inc',
-  );
   $items['admin/config/people/rpx/mapping/edit'] = array(
     'title' => 'Edit mapping options',
     'page callback' => 'drupal_get_form',
@@ -336,7 +329,7 @@ function _rpx_drupal_field_catalog() {
 
   // Build an array containing the fields defined by the Profile core module.
   if (module_exists('profile')) {
-    $result = db_query("SELECT fid, title, name FROM {profile_field} WHERE type IN ('textfield', 'textarea', 'url') ORDER BY weight, title", array());
+    $result = db_query("SELECT fid, title, name FROM {profile_field} WHERE type IN ('textfield', 'textarea', 'url', 'date', 'selection') ORDER BY weight, title", array());
     $fields = array();
     while ($row = $result->fetchObject()) {
       $fields[$row->name] = $row->title;
@@ -513,7 +506,7 @@ function rpx_ui_help($path, $arg) {
       $output .= '</dl>';
       return $output;
     case 'admin/config/people/rpx/mapping':
-      return '<p>' . t('This page displays the mapping of Drupal profile fields (either <em>User</em> fields or those created using the <em>Profile</em> and <em>Profile2</em> modules) to the 3rd party user profile data returned by Engage. This mapping is used to pre-fill configured Drupal profile fields at user signup and to import the data when user links a 3rd party account. You can add a new mapping or edit/delete an existing one.') . '</p><p>'. t('Create an Engage data field to map to (on the <em>Manage Fields</em> tab), then select it from the dropdown menu below and select the Drupal profile field that should be mapped to the Engage data. Currently only 3 Drupal <em>Profile</em> field types are supported: single-line text, multi-line text, and URL; <em>Profile2</em> and <em>User</em> fields support is limited to text fields.') . '</p>';
+      return '<p>' . t('This page displays the mapping of Drupal profile fields (either <em>User</em> fields or those created using the <em>Profile</em> and <em>Profile2</em> modules) to the 3rd party user profile data returned by Engage. This mapping is used to pre-fill configured Drupal profile fields at user signup and to import the data when user signs in using (or links) a 3rd party account. You can add a new mapping or edit/delete an existing one.') . '</p><p>'. t('Create an Engage data field to map to (on the <em>Manage Fields</em> tab), then select it from the dropdown menu below and select the Drupal profile field that should be mapped to the Engage data. Currently only 5 Drupal <em>Profile</em> field types are supported: single-line text, multi-line text, URL, list selection and date; <em>Profile2</em> and <em>User</em> fields support is limited to text fields.') . '</p>';
   case 'admin/config/people/rpx/fields':
     $help = '<p>' . t('Here you can create new fields that can be used on the <em>Field Mapping</em> tab. You can also edit or delete existing fields.') . '</p>';
     if (!module_exists('token')) {
@@ -557,6 +550,7 @@ function _rpx_delete_user_data($uid) {
  */
 function rpx_ui_user_delete($account) {
   _rpx_delete_user_data($account->uid);
+  _rpx_delete_engage_mapping('', $account->uid, TRUE);
 }
 
 /**
@@ -566,6 +560,7 @@ function rpx_ui_user_cancel($edit, $account, $method) {
   switch ($method) {
     case 'user_cancel_reassign':
       _rpx_delete_user_data($account->uid);
+      _rpx_delete_engage_mapping('', $account->uid, TRUE);
       break;
   }
 }

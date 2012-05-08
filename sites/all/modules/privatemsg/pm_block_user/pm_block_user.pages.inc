@@ -1,5 +1,4 @@
 <?php
-// $Id: pm_block_user.pages.inc,v 1.1.2.8 2010/11/30 07:45:08 berdir Exp $
 
 /**
  * @file
@@ -123,7 +122,7 @@ function pm_block_user_list() {
   $rows = array();
   foreach ($select->execute() as $row) {
     $rows[] = array(
-      theme('username', array('account' => _privatemsg_user_load($row->author))),
+      theme('username', array('account' => user_load($row->author))),
       l(t('unblock'), 'messages/block/' . $row->author, array('query' => drupal_get_destination())),
     );
   }
@@ -138,7 +137,7 @@ function pm_block_user_list() {
 function pm_block_user_block_validate($form, &$form_state) {
   global $user;
   list($accounts, $invalid) = _privatemsg_parse_userstring($form_state['values']['name'], array('user'));
-  // Remove acocunts that can not be blocked.
+  // Remove accounts that can not be blocked.
   if (!empty($accounts)) {
     foreach ($accounts as $id => $account) {
 

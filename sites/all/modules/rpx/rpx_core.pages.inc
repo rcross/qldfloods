@@ -20,19 +20,27 @@ function rpx_token_handler() {
   $add_to_account = isset($_REQUEST['add_to_account']) ? TRUE : FALSE;
 
   if ($token) {
-    $_SESSION['rpx'] = RPX::auth_info($token, variable_get('rpx_apikey', ''), variable_get('rpx_extended_authinfo', FALSE));
-    if (!$_SESSION['rpx']) {
+    $rpx_data = RPX::auth_info($token, variable_get('rpx_apikey', ''), variable_get('rpx_extended_authinfo', FALSE));
+
+    if (!$rpx_data) {
       drupal_goto();
     }
     // auth_info() stat should be ok
-    if ($_SESSION['rpx']['stat'] != 'ok') {
+    if ($rpx_data['stat'] != 'ok') {
       drupal_set_message(t('We were unable to complete your request.'), 'error');
-      watchdog('rpx_core', 'Failed to obtain a 3rd party identifier for user ID %id: auth_info() returned error: %err', array('%id' => $user->uid, '%err' => $_SESSION['rpx']['err']['msg']), WATCHDOG_ERROR);
+      watchdog('rpx_core', 'Failed to obtain a 3rd party identifier for user ID %id: auth_info() returned error: %err', array('%id' => $user->uid, '%err' => $rpx_data['err']['msg']), WATCHDOG_ERROR);
       drupal_goto();
     }
 
-    $rpx_id = $_SESSION['rpx']['profile']['identifier'];
-    $provider_title = $_SESSION['rpx']['profile']['providerName'];
+    rpx_core_save_rpx_session($rpx_data);
+
+    // Possible leftover from previous attempt to sign in.
+    if (isset($_SESSION['rpx_signup_failed'])) {
+      unset($_SESSION['rpx_signup_failed']);
+    }
+
+    $rpx_id = $rpx_data['profile']['identifier'];
+    $provider_title = $rpx_data['profile']['providerName'];
 
     // Save provider info (for token replacement and account linking).
     $_SESSION['rpx_last_provider_info'] = array(
@@ -98,9 +106,11 @@ function rpx_token_handler() {
               'provider_title' => $_SESSION['rpx_last_provider_info']['title'],
             );
             module_invoke_all('rpx_linked_account', 'added', $account);
-            _rpx_import_user_data();
+            _rpx_import_user_data($user);
+            _rpx_update_engage_mapping($user->uid);
           }
         }
+        rpx_core_delete_rpx_session();
         // Redirect the user back to original overlay if possible.
         // @see rpx_user_identities().
         if (isset($_SESSION['rpx_overlay_uri'])) {
@@ -115,6 +125,11 @@ function rpx_token_handler() {
           drupal_set_message($message['text'], $message['type']);
           drupal_goto('user/' . $user->uid . '/rpx');
         }
+      }
+      else {
+        rpx_core_delete_rpx_session();
+        drupal_set_message(t('Please sign in before linking additional accounts.'), 'error');
+        return MENU_ACCESS_DENIED;
       }
     }
 
@@ -141,10 +156,20 @@ function rpx_token_handler() {
         if (!form_get_errors()) {
           // Load global $user and perform final login tasks.
           $form_state['uid'] = $account->uid;
+          _rpx_import_user_data($account);
+          _rpx_update_engage_mapping($account->uid);
+          rpx_core_delete_rpx_session();
+          // Since the user is cleared for login, there's no need to keep
+          // Engage data on the user object anymore.
+          if (isset($account->data['rpx_data'])) {
+            unset($account->data['rpx_data']);
+            user_save($account);
+          }
           user_login_submit(array(), $form_state);
         }
       }
       else {
+        rpx_core_delete_rpx_session();
         drupal_set_message(t('You must validate your email address for this account before logging in with it.'), 'error');
       }
       drupal_goto();
@@ -194,12 +219,17 @@ function rpx_token_handler() {
         }
 
         // Redirect to the normal registration page and prefill with the values
-        // we received from Engage.
+        // we received from Engage (see rpx_core_form_user_register_form_alter()).
+        // Signal our registration form alter function that automatic user
+        // registration failed and we want to keep the captcha (if any) this
+        // time around.
+        $_SESSION['rpx_signup_failed'] = TRUE;
         $destination = drupal_get_destination();
         unset($_GET['destination']);
         drupal_goto('user/register', array('query' => $destination));
       }
       else {
+        rpx_core_delete_rpx_session();
         drupal_set_message(t('Only site administrators can create new user accounts.'), 'error');
         drupal_goto();
       }

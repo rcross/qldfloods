@@ -1,5 +1,4 @@
 <?php
-// $Id: privatemsg.theme.inc,v 1.1.2.7.2.15 2011/01/05 09:10:29 berdir Exp $
 
 /**
  * @file
@@ -41,7 +40,7 @@
  * id "privatemsg_list" will contain the header, raw and themed field data in
  * the following form:
  * @code
- * $form['#headers']['field_name'] = $header // Array with the header defintion;
+ * $form['#headers']['field_name'] = $header // Array with the header definition;
  * $form['#data']['thread_id'] = $data // Raw data of that thread
  * $form['#rows']['thread_id'] = $row // Themed fields of that thread
  * @endcode
@@ -121,7 +120,7 @@ function theme_privatemsg_list_field__count($variables) {
   $options = array();
   if (!empty($thread['is_new']) && $thread['is_new'] < $thread['count']) {
     $options['fragment'] = 'new';
-    $field['data'] .= '<br />' . l((format_plural($thread['is_new'], '(1 new)', '(@count new)')),'messages/view/' . $thread['thread_id'], $options);
+    $field['data'] .= '<br />' . l((format_plural($thread['is_new'], '(1 new)', '(@count new)')), 'messages/view/' . $thread['thread_id'], $options);
   }
   $field['class'][] = 'privatemsg-list-count';
   return $field;

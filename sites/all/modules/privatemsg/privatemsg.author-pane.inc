@@ -1,5 +1,4 @@
 <?php
-// $Id: privatemsg.author-pane.inc,v 1.1.2.3.2.5 2010/12/23 12:23:23 berdir Exp $
 
 /**
  * @file
@@ -18,7 +17,7 @@ function privatemsg_preprocess_author_pane(&$variables) {
   global $user;
   $account = $variables['account'];
 
-  if ($account_id != $user->uid) {
+  if ($account->uid != $user->uid) {
     $url = privatemsg_get_link($account);
     if (!empty($url)) {
       $variables['privatemsg'] = l('<span>' . t('Send PM') . '</span>', $url, array('attributes' => array('class' => array('author-pane-link'), 'title' => t('Send @name a private message', array('@name' => privatemsg_recipient_format($account, array('plain' => TRUE))))), 'html' => TRUE));
@@ -27,7 +26,7 @@ function privatemsg_preprocess_author_pane(&$variables) {
 }
 
 /**
- * Implementation of hook_author_pane_allow_preprocess_disable().
+ * Implements hook_author_pane_allow_preprocess_disable().
  */
 function privatemsg_author_pane_allow_preprocess_disable() {
   return array('privatemsg' => 'Privatemsg');

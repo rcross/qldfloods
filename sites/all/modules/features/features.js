@@ -1,4 +1,3 @@
-// $Id: features.js,v 1.1.2.8.2.2 2010/09/09 18:13:05 yhahn Exp $
 (function ($) {
   Drupal.behaviors.features = {
     attach: function(context, settings) {
@@ -39,7 +38,7 @@
           .after(' <small class="feature-module-name-suffix">&nbsp;</small>');
         if ($('.feature-module-name').val() === $('.feature-name').val().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+/g, '_') || $('.feature-module-name').val() === '') {
           $('.feature-module-name').parents('.form-item').hide();
-          $('.feature-name').keyup(function() {
+          $('.feature-name').bind('keyup change', function() {
             var machine = $(this).val().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+/g, '_');
             if (machine !== '_' && machine !== '') {
               $('.feature-module-name').val(machine);

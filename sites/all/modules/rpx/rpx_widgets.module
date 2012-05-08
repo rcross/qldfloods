@@ -202,7 +202,6 @@ function rpx_widgets_comment_view_alter(&$build) {
 
   drupal_add_js($settings, 'setting');
 
-  rpx_js();
   rpx_js_social();
 }
 
@@ -224,8 +223,12 @@ function rpx_widgets_page_alter(&$page) {
 /**
  * Adds Engage JS to the page (common for the sign-in and social sharing
  * functionality).
+ *
+ * @param boolean $show_provider_list
+ *   If TRUE, make the sign-in widget display all available providers (used on
+ *   the "linked accounts" page.)
  */
-function rpx_js() {
+function rpx_js($show_provider_list = FALSE) {
   static $added = FALSE;
 
   // Only attempt to add javascript once
@@ -244,12 +247,8 @@ function rpx_js() {
   $flags = 'delay_domain_check';
 
   $output = '    <!-- Begin Janrain Engage Sign-In. Visit http://www.rpxnow.com/ -->';
-  if (!(arg(0) == 'user' && arg(2) == 'rpx')) {
-    $token_url = _rpx_token_url();
-    $output .= '
-    RPXNOW.token_url = "' . $token_url . '"';
-  }
-  else {
+
+  if ($show_provider_list) {
     $flags .= ',show_provider_list';
   }
 
@@ -452,7 +451,6 @@ function _rpx_share_button($node) {
   }
   drupal_add_js($settings, 'setting');
 
-  rpx_js();
   rpx_js_social();
   return theme('rpx_share_button', array('node' => $node));
 }

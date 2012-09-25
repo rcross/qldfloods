@@ -1,0 +1,16 @@
+diff --git a/modules/dblog/dblog.module b/modules/dblog/dblog.module
+index 9420c53..cbdff35 100644
+--- a/modules/dblog/dblog.module
++++ b/modules/dblog/dblog.module
+@@ -138,9 +138,10 @@ function _dblog_get_message_types() {
+  * Note some values may be truncated for database column size restrictions.
+  */
+ function dblog_watchdog(array $log_entry) {
++  $user_uid = isset($log_entry['user']->uid) ? $log_entry['user']->uid : 0;
+   Database::getConnection('default', 'default')->insert('watchdog')
+     ->fields(array(
+-      'uid' => $log_entry['uid'],
++      'uid' => $user_uid,
+       'type' => substr($log_entry['type'], 0, 64),
+       'message' => $log_entry['message'],
+       'variables' => serialize($log_entry['variables']),

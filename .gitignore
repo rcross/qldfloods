@@ -4,3 +4,5 @@ sites/*/settings*.php
 # Ignore paths that contain user-generated content.
 sites/*/files
 sites/*/private
+privatemsg-7.x-1.3.tar.gz
+sites/default/
